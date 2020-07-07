@@ -1,5 +1,7 @@
 #include "file.hpp"
 
+#include <stdexcept>
+
 namespace util
 {
   file_t::file_t (std::string const& filename)
@@ -18,7 +20,7 @@ namespace util
   {
     fclose (handle);
   }
-  void const* file_t::end() const 
+  void const* file_t::end() const
   {
     return data.data() + data.size();
   }
