@@ -80,3 +80,5 @@ target_link_libraries (meshtool.exe glfw)
 file (COPY ${CMAKE_SOURCE_DIR}/meshtool/DroidSans.ttf
   DESTINATION ${CMAKE_BINARY_DIR}
 )
+
+add_executable (tablehash.exe tablehash.cpp)
