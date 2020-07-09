@@ -76,8 +76,8 @@ DBMeta = tutil.add_unpacked_type ('DBMeta',
                                    void *field_28;
                                    void *field_30;
                                    void *field_38;
-                                   void *field_40;
-                                   void *field_48;
+                                   unsigned int *field_40;
+                                   int *fieldTypes;
                                    void *field_50;
                                    _BYTE gap58[4];
                                    int m_tableHash;
