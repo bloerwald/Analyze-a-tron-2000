@@ -1,3 +1,4 @@
+import butil
 import idautils
 import idc
 import re
@@ -48,7 +49,7 @@ def strip_buildserver_fs_prefix(filename):
 
   fn_symbolish = filename.replace (r'[-\.]', '_').replace ('/', '::')
   prefix = (os.path.splitext(filename)[0] + '/').replace (r'[-\.]', '_').replace ('/', '::')
-  return filename, fn_symbolish, prefix
+  return filename.replace('/', '\\'), fn_symbolish, prefix
 
 def xrefs(to):
   return [(xref.__dict__['type'], xref.__dict__['frm'], xref.__dict__['to'], xref.__dict__['iscode']) for xref in idautils.XrefsTo (to, True)]
@@ -71,20 +72,19 @@ def forbidden_name(string):
 names = dict()
 mediocre_names = dict()
 
-sc = idaapi.string_info_t()
-for i in range(0,idaapi.get_strlist_qty()):
-  idaapi.get_strlist_item(sc, i)
-  filename = idaapi.get_ascii_contents(sc.ea,sc.length,sc.type)
+for filename_addr in butil.find_string_all('D:\\BuildServer\\WoW\\', butil.SearchRange.segment('.rdata')):
+  filename = idc.GetString(filename_addr, -1)
+
+  filename, fn_symbolish, prefix = strip_buildserver_fs_prefix (filename)
+  butil.mark_string(filename_addr, 'filename_{}'.format (fn_symbolish))
 
   if forbidden_file(filename):
     if '\\work\\shared-checkout\\' in filename:
       print('skipping file:', filename)
     continue
 
-  filename, fn_symbolish, prefix = strip_buildserver_fs_prefix (filename)
-  MakeName(sc.ea, 'filename_' + fn_symbolish)
   funs = set()
-  for _, frm, _, _ in xrefs (sc.ea):
+  for _, frm, _, _ in xrefs (filename_addr):
     addr = idc.get_func_attr(frm, idc.FUNCATTR_START)
     if addr != idc.BADADDR:
       funs.add (addr)
