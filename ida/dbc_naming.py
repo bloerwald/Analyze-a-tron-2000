@@ -35,11 +35,8 @@ UncompressedColumnReturnerLoc = find_pattern ('48 89 5C 24 08 48 89 6C 24 10 48 
 # }
 RowReturnerLoc = find_pattern ('48 89 5C 24 18 55 56 57 48 83 EC 60 41 C6 01 01 49 8B D9 80 B9 CD 01 00 00 00 41 0F B6 E8 8B F2 48 8B F9 75 ? C7 44 24 38 11 11 11 11')
 
+MakeName(DB2ConstructorLocation, tdbc.WowClientDB2_Base + "::ctor")
 
-# End of config
-
-# Name DB2 constructors
-MakeName(DB2ConstructorLocation, "ClientDB::Constructor")
 for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
     metaRef = codeRef - 14
     dbObjectRef = codeRef - 7
@@ -113,4 +110,4 @@ for codeRef in CodeRefsTo(UncompressedColumnReturnerLoc, 0):
     #TODO After that you should also check that mov after the dead mov to get data type and settype the function. I suggest determinedType f(_UNKNOWN*).
 
 # Name generic row returner
-MakeName(RowReturnerLoc, "ClientDB::GetRowByID")
+MakeName(RowReturnerLoc, tdbc.WowClientDB2_Base + "::GetRowByID")
