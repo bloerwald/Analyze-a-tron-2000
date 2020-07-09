@@ -1,6 +1,6 @@
 [submodule "meshtool"]
 	path = meshtool
-	url = git@github.com:Mischanix/meshtool.git
+	url = ../../Mischanix/meshtool.git
 [submodule "glfw"]
 	path = glfw
-	url = git@github.com:glfw/glfw.git
+	url = ../../glfw/glfw.git

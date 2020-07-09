@@ -1,1 +1,5 @@
 example_files/*
+ida/WoWDBDefs
+ida/dbd_based_structs.h
+ida/*.pyc
+build
