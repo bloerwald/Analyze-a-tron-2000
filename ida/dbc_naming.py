@@ -43,6 +43,7 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
 
     MakeUnknown(metaTableAddr, 1, DOUNK_SIMPLE)
     MakeName(metaTableAddr, "dbMeta_" + name)
+    SetType (metaTableAddr, tdbc.DBMeta)
 
     MakeUnknown(dbObjectAddr, 1, DOUNK_SIMPLE)
     MakeName(dbObjectAddr, "db_" + name)
