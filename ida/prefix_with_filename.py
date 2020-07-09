@@ -1,20 +1,54 @@
 import idautils
 import idc
+import re
 
 settle_for_mediocre_names = False
 
+prefixes = [(r'.*/Battle.net.aurora/(include|src)/', 'bna/'),
+            (r'.*/Battle.net.labs/Base/source/base/', 'bnl/base/'),
+            (r'.*/Battle.net.labs/bnl_checkout-.*/source/', 'bnl/checkout/'),
+            (r'.*/Battle.net.labs/bnl_scene-.*/source/', 'bnl/scene/'),
+            (r'.*/Battle.net.labs/bnl_scene_browser-.*/source/', 'bnl/scene_browser/'),
+            (r'.*/Battle.net.labs/Downloader/(.*)/(source|include)/\1/', r'bnl/downloader/\1/'),
+            (r'.*/Battle.net.labs/ShMem/shmem/source/', 'bnl/shmem/'),
+            (r'.*/Battle.net.labs/TACT/(.*)/(source|include)/', r'bnl/tact/\1/'),
+            (r'.*/Battle.net.lib-websocket/src/', 'bnl/websocket/'),
+            (r'.*/Blizzard/blz/[0-9]*.[0-9]*.[0-9]*/(include|src)/blz/', 'blz/'),
+            (r'.*/Blizzard/prism/[0-9]*.[0-9]*.[0-9]*/(.*)/(include|src)/', r'blz/prism/\1/'),
+            (r'.*/Blizzard/tag(_rpc|)/(src|include)/', r'blz/tag\1/'),
+            (r'.*/Contrib/', ''),
+            (r'.*/lua-5.1/src/', 'lua/'),
+            (r'.*/fmod/fmod4/(src|lib)/fmod_', 'fmod/'),
+            (r'.*/fmod/fmod4/(src|lib)/', 'fmod/'),
+            (r'.*/Engine/Source/Gx/(include|src)/(Gx/)*', 'Engine/Gx/'),
+            (r'.*/google/protobuf/', 'protobuf/'),
+            (r'.*/Storm/(H|Source)/', 'Storm/'),
+            (r'.*/Engine/Source/Domino/(Include|Source)/Domino/', 'Engine/Domino/'),
+            (r'.*/Engine/Source/Domino/(Include|Source)/', 'Engine/Domino/'),
+            (r'.*/WoW/Common/', 'Wow/Common/'),
+            (r'.*/WoW/Source/Wow', 'Wow/'),
+            (r'.*/WoW/Source/', 'Wow/'),
+            (r'.*/Mainline/Source/', 'Wow/Mainline/'),
+            (r'.*/Engine/Source/', 'Engine/'),
+            (r'.*/Build/src/', 'Wow/'),
+]
+
 def strip_buildserver_fs_prefix(filename):
-  if 'Source\\' in filename:
-    filename = filename[filename.find ('Source\\')+len('Source\\'):]
-  if 'src\\' in filename:
-    filename = filename[filename.find ('src\\')+len('src\\'):]
-  if 'source\\' in filename:
-    filename = filename[filename.find ('source\\')+len('source\\'):]
-  if '-branch\\' in filename:
-    filename = filename[filename.find ('-branch\\')+len('-branch\\'):]
-  filename = filename.replace ('-', '_')
-  filename = filename.replace('\\', '::')
-  return filename
+  filename = filename.replace ('\\', '/')
+  had_prefix = False
+  for prefix, replacement in prefixes:
+    repl = re.sub (prefix, replacement, filename)
+    if repl != filename:
+      filename = repl
+      had_prefix = True
+      break
+
+  if not had_prefix:
+    print('WARNING: New prefix?', filename)
+
+  fn_symbolish = filename.replace (r'[-\.]', '_').replace ('/', '::')
+  prefix = (os.path.splitext(filename)[0] + '/').replace (r'[-\.]', '_').replace ('/', '::')
+  return filename, fn_symbolish, prefix
 
 def xrefs(to):
   return [(xref.__dict__['type'], xref.__dict__['frm'], xref.__dict__['to'], xref.__dict__['iscode']) for xref in idautils.XrefsTo (to, True)]
@@ -28,9 +62,7 @@ def forbidden_file(string):
     return True
   return False
 def last_effort_file(string):
-  if string.endswith('.inl') or string.endswith ('.h'):
-    return True
-  if 'include\\' in string:
+  if string.endswith('.inl') or string.endswith ('.h') or string.endswith ('.hpp') or string.endswith ('.H') or 'include' in string:
     return True
   return False
 def forbidden_name(string):
@@ -49,13 +81,13 @@ for i in range(0,idaapi.get_strlist_qty()):
       print('skipping file:', filename)
     continue
 
-  prefix = strip_buildserver_fs_prefix (filename)
-  MakeName(sc.ea, 'filename_' + prefix)
-  prefix = os.path.splitext(prefix)[0] + '::'
-  prefix = prefix.replace ('.', '_')
+  filename, fn_symbolish, prefix = strip_buildserver_fs_prefix (filename)
+  MakeName(sc.ea, 'filename_' + fn_symbolish)
   funs = set()
   for _, frm, _, _ in xrefs (sc.ea):
-    funs.add (idc.get_func_attr(frm, idc.FUNCATTR_START))
+    addr = idc.get_func_attr(frm, idc.FUNCATTR_START)
+    if addr != idc.BADADDR:
+      funs.add (addr)
 
   for fun in funs:
     curr_fun_name = idc.GetFunctionName(fun)
@@ -78,7 +110,12 @@ for i in range(0,idaapi.get_strlist_qty()):
         del mediocre_names[fun]
 
 for fun, candidates in names.items():
-  MakeName(fun, candidates[0])
+  MakeName (fun, candidates[0])
+  if len(candidates) > 1:
+    idc.MakeComm(fun, 'or ' + ' or '.join(candidates[1:]))
+    print('mutiple function names for {} :('.format(', '.join(candidates)))
 if settle_for_mediocre_names:
   for fun, candidates in mediocre_names.items():
-    MakeName(fun, candidates[0])
+    MakeName (fun, candidates[0] + '$med')
+    if len(candidates) > 1:
+      idc.MakeComm(fun, 'or ' + ' or '.join(candidates[1:]))
