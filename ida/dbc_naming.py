@@ -15,12 +15,14 @@ def find_pattern(pattern):
 # the db object. db object ctor takes db* and meta*.
 # todo: this is probably way too long.
 DB2ConstructorLocation = find_pattern ('4C 8B DC 53 57 48 81 EC A8 00 00 00 48 89 51 08 48 8D 05 ? ? ? ? 48 89 01 48 8B D9 33 C0 48 C7 41 78 08 00 00 00 48 89 41 10 48 89 41 18 48 89 41 20 48 89 41 28 48 89 41 30 48 89 41 38 48 89 41 40 48 89 41 48 48 89 41 50 48 89 41 58 48 89 41 60 48 89 41 68 48 89 81 88 00 00 00 48 89 81 80 00 00 00 48 89 81 98 00 00 00 48 89 81 A0 00 00 00 48 89 81 A8 00 00 00')
-# function that is called from column getters to decompress: search
-# for string 'bitsToRead + bitsRight < DB2_COMPRESS_READ_TYPE_BIT_SIZE',
-# xref to that. there is likely multiple inlined copies but one that
-# just does tha assertion and some bit shifting which is called from
-# all over the place
-UncompressedColumnReturnerLoc = find_pattern ('48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 48 83 EC 40 8B DA 8B F2 83 E3 07 41 8B F8 48 8B E9 42 8D 04 03 83 F8 40')
+
+# function that is called from column getters to get field offset:
+# search for string 'fieldIndex < m_meta->hotFixFieldCount', xref to
+# that. there is likely multiple inlined copies but one that just does
+# that assertion and accessing another m_meta field, returning it,
+# which is called from all over the place
+GetInMemoryFieldOffsetFromMetaLoc = find_pattern ('48 89 5C 24 08 57 48 83 EC 40 48 8B 41 08 48 8B F9 8B DA 3B 50 14 72 40 C7 44 24 38 11 11 11 11 4C 8D 0D')
+
 # GetRowByID: start from a database object, preferably one that isn't
 # used *that* much. go over xrefs. at least one is going to call a
 # function that takes (db*, index, bool, bool*).
@@ -81,7 +83,7 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
         SetType(db2ObjectRef.frm, tdbc.WowClientDB2_Base + " *__fastcall " + functionName + "()")
 
 # Name column getting functions based on the uncompressed column returner
-for codeRef in CodeRefsTo(UncompressedColumnReturnerLoc, 0):
+for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
     if GetDisasm(codeRef - 3) != "mov     rcx, rax":
         continue
 
