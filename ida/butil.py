@@ -40,10 +40,11 @@ def find_pattern(pattern, search_range = None):
   first_result = _find_sane (begin, end, pattern)
   if not first_result:
     raise Exception ('unable to find pattern {}'.format (pattern))
-  # todo: this takes forever, but sanity *would* be nice :/
-  ## second_result = idc.FindBinary (first_result + 1, idc.SEARCH_DOWN, pattern, 16)
-  ## if second_result != idc.BADADDR:
-  ##   raise Exception ('found more than one occurence of pattern {}, {} and {}'.format (pattern, hex (first_result), hex (second_result)))
+
+  second_result = _find_sane (first_result + 1, end, pattern)
+  if second_result:
+    raise Exception ('found more than one occurence of pattern {}, {} and {}'.format (pattern, hex (first_result), hex (second_result)))
+
   return first_result
 
 def find_pattern_all(pattern, search_range = None):
