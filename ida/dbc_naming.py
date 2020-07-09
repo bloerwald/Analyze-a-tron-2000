@@ -1,8 +1,19 @@
 import tdbc
-# Config
-DB2ConstructorLocation = 0x00007FF78302AA00
-UncompressedColumnReturnerLoc = 0x00007FF782A72250
 
+# clientdb_base ctor: search any database name, xref to dbmeta, xref
+# to the function using that, is mostly just one, the static ctor for
+# the db object. db object ctor takes db* and meta*.
+# todo: this is probably way too long.
+DB2ConstructorLocation = 0x00007FF78302AA00
+# function that is called from column getters to decompress: search
+# for string 'bitsToRead + bitsRight < DB2_COMPRESS_READ_TYPE_BIT_SIZE',
+# xref to that. there is likely multiple inlined copies but one that
+# just does tha assertion and some bit shifting which is called from
+# all over the place
+UncompressedColumnReturnerLoc = 0x00007FF782A72250
+# GetRowByID: start from a database object, preferably one that isn't
+# used *that* much. go over xrefs. at least one is going to call a
+# function that takes (db*, index, bool, bool*).
 # Example:
 # __int64 __fastcall sub_7FF761D3ED10(unsigned int a1)
 # {
