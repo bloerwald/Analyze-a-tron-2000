@@ -1,3 +1,4 @@
+import tdbc
 # Config
 DB2ConstructorLocation = 0x00007FF78302AA00
 UncompressedColumnReturnerLoc = 0x00007FF782A72250
@@ -13,8 +14,6 @@ UncompressedColumnReturnerLoc = 0x00007FF782A72250
 # }
 RowReturnerLoc = 0x00007FF783030C30
 
-#TODO: Define local type through script, see bernd's hard drive
-DBStruct = "ClientDB"
 
 # End of config
 
@@ -47,7 +46,7 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
 
     MakeUnknown(dbObjectAddr, 1, DOUNK_SIMPLE)
     MakeName(dbObjectAddr, "db_" + name)
-    SetType(dbObjectAddr, DBStruct)
+    SetType(dbObjectAddr, tdbc.WowClientDB2_Base)
 
     for db2ObjectRef in XrefsTo(dbObjectAddr, 0):
         if GetMnem(db2ObjectRef.frm) != "lea" or GetOpnd(db2ObjectRef.frm, 0) != "rax":
@@ -60,7 +59,7 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
         MakeFunction(db2ObjectRef.frm)
         functionName = "GetDB" + name + "Pointer"
         MakeName(db2ObjectRef.frm, functionName)
-        SetType(db2ObjectRef.frm, DBStruct + " *__fastcall " + functionName + "()")
+        SetType(db2ObjectRef.frm, tdbc.WowClientDB2_Base + " *__fastcall " + functionName + "()")
 
 # Name column getting functions based on the uncompressed column returner
 for codeRef in CodeRefsTo(UncompressedColumnReturnerLoc, 0):
@@ -93,70 +92,3 @@ for codeRef in CodeRefsTo(UncompressedColumnReturnerLoc, 0):
 
 # Name generic row returner
 MakeName(RowReturnerLoc, "ClientDB::GetRowByID")
-
-
-#TODO set below struct and maybe check if it fits because it can change per build
-# struct __unaligned __declspec(align(1)) ClientDB
-# {
-#   _QWORD qword0;
-#   _QWORD qword8;
-#   _QWORD qword10;
-#   _QWORD qword18;
-#   _QWORD qword20;
-#   _QWORD qword28;
-#   _QWORD qword30;
-#   _QWORD qword38;
-#   _QWORD qword40;
-#   _QWORD qword48;
-#   _QWORD qword50;
-#   _QWORD qword58;
-#   _QWORD qword60;
-#   _QWORD qword68;
-#   _BYTE gap70[8];
-#   _QWORD qword78;
-#   _QWORD qword80;
-#   _QWORD qword88;
-#   _DWORD dword90;
-#   _BYTE gap94[4];
-#   _QWORD m_parentLookup;
-#   _QWORD qwordA0;
-#   _QWORD qwordA8;
-#   _QWORD qwordB0;
-#   _QWORD qwordB8;
-#   _QWORD qwordC0;
-#   _QWORD qwordC8;
-#   _QWORD qwordD0;
-#   _QWORD qwordD8;
-#   _QWORD qwordE0;
-#   _DWORD dwordE8;
-#   _BYTE gapEC[4];
-#   _QWORD qwordF0;
-#   _QWORD qwordF8;
-#   _QWORD qword100;
-#   _QWORD qword108;
-#   _QWORD qword110;
-#   _QWORD qword118;
-#   _BYTE gap120[16];
-#   _QWORD qword130;
-#   _QWORD qword138;
-#   _QWORD qword140;
-#   _QWORD qword148;
-#   _QWORD qword150;
-#   _QWORD qword158;
-#   _QWORD qword160;
-#   _QWORD qword168;
-#   _QWORD qword170;
-#   _QWORD qword178;
-#   _QWORD qword180;
-#   _QWORD qword188;
-#   _QWORD qword190;
-#   _QWORD qword198;
-#   _QWORD qword1A0;
-#   _DWORD dword1A8;
-#   _DWORD dword1AC;
-#   _BYTE gap1B0[8];
-#   _QWORD qword1B8;
-#   _QWORD qword1C0;
-#   _QWORD qword1C8;
-#   _BYTE byte1D0;
-# };
