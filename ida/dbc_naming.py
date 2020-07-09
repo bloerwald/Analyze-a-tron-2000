@@ -76,6 +76,8 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
         MakeName(db2ObjectRef.frm, functionName)
         SetType(db2ObjectRef.frm, tdbc.WowClientDB2_Base + " *__fastcall " + functionName + "()")
 
+column_getters = {}
+
 # Name column getting functions based on the uncompressed column returner
 for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
   match = cutil.matches_any(codeRef,
@@ -161,11 +163,22 @@ for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
     print ('column getters: skipping {}: unknown pattern'.format (hex (codeRef)))
     continue
 
-  column, dbname = match
-
-  funcToRename = cutil.function_containing(codeRef)
-  MakeName(funcToRename, dbname + "::column_" + str(column))
-
   # todo: check that we're not naming an inlined function, e.g. by function size
+
+  new_name = '{}::column_{}'.format (match[1], match[0])
+
+  if not new_name in column_getters:
+    column_getters[new_name] = []
+  column_getters[new_name] += [cutil.function_containing(codeRef)]
+
+for name, eas in column_getters.items():
+  if len(eas) == 1:
+    MakeName (eas[0], name)
+  else:
+    suff = ord('a')
+    for ea in eas:
+      MakeName (ea, '{}_{}'.format(name, chr(suff)))
+      suff += 1
+
   # todo: set type of function to `${dbmeta[column].types} (dbRec-but-with-that-stupid-offset*)`
   # to help autoanalysis
