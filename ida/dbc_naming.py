@@ -1,3 +1,4 @@
+import cutil
 import tdbc
 
 def find_pattern(pattern):
@@ -86,29 +87,38 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
 
 # Name column getting functions based on the uncompressed column returner
 for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
-    if GetDisasm(codeRef - 3) != "mov     rcx, rax":
-        continue
+  match = cutil.matches_any(codeRef,
+                            ( [ (-0x0A, ['call', 'GetDB.*Pointer']),
+                                (-0x05, ['xor',  'edx', 'edx'  ]),
+                                (-0x03, ['mov',  'rcx', 'rax'  ]),
+                                (+0x00, ['call', '.*'          ]),
+                                (+0x05, ['mov',  'eax', 'eax'  ]),
+                              ],
+                              [ 0,
+                                (0, 0, lambda val: Name(val)[len('GetDB'):-len('Pointer')]),
+                              ],
+                            ),
+                            ( [ (-0x0D, ['call', 'GetDB.*Pointer']),
+                                (-0x08, ['mov',  'edx', '.*'   ]),
+                                (-0x03, ['mov',  'rcx', 'rax'  ]),
+                                (+0x00, ['call', '.*'          ]),
+                                (+0x05, ['mov',  'eax', 'eax'  ]),
+                              ],
+                              [ (1, 1, lambda val: val),
+                                (0, 0, lambda val: Name(val)[len('GetDB'):-len('Pointer')]),
+                              ],
+                            ),
+                          )
 
-    if GetDisasm(codeRef + 5) != "mov     eax, eax":
-        continue
+  if match is None:
+    print ('column getters: skipping {}: unknown pattern'.format (hex (codeRef)))
+    continue
 
-    colOffset = 0
+  column, dbname = match
 
-    if GetDisasm(codeRef - 5) == "xor     edx, edx":
-        colOffset = 5
-        colIndex = 0
-    elif GetMnem(codeRef - 8) == "mov" and GetOpnd(codeRef - 8, 0) == "edx":
-        colOffset = 8
-        colIndex = GetOperandValue(codeRef - 8, 1)
-    else:
-        print("something else", hex(codeRef))
-        continue
+  funcToRename = cutil.function_containing(codeRef)
+  MakeName(funcToRename, dbname + "::column_" + str(column))
 
-    callAddr = codeRef - colOffset - 5
-    db2Name = GetFunctionName(GetOperandValue(callAddr, 0))[5:-7]
-
-    funcToRename = NextFunction(PrevFunction(callAddr))
-    MakeName(funcToRename, db2Name + "::column_" + str(colIndex))
-
-    #TODO Check function length to make sure we're not inline
-    #TODO After that you should also check that mov after the dead mov to get data type and settype the function. I suggest determinedType f(_UNKNOWN*).
+  # todo: check that we're not naming an inlined function, e.g. by function size
+  # todo: set type of function to `${dbmeta[column].types} (dbRec-but-with-that-stupid-offset*)`
+  # to help autoanalysis
