@@ -1,16 +1,26 @@
 import tdbc
 
+def find_pattern(pattern):
+  first_result = idc.FindBinary (INF_BASEADDR, SEARCH_DOWN, pattern, 16)
+  if first_result == BADADDR:
+    raise Exception ('unable to find pattern {}'.format (pattern))
+  # todo: this takes forever, but sanity *would* be nice :/
+  ## second_result = idc.FindBinary (first_result + 1, SEARCH_DOWN, pattern, 16)
+  ## if second_result != BADADDR:
+  ##   raise Exception ('found more than one occurence of pattern {}, {} and {}'.format (pattern, hex (first_result), hex (second_result)))
+  return first_result
+
 # clientdb_base ctor: search any database name, xref to dbmeta, xref
 # to the function using that, is mostly just one, the static ctor for
 # the db object. db object ctor takes db* and meta*.
 # todo: this is probably way too long.
-DB2ConstructorLocation = 0x00007FF78302AA00
+DB2ConstructorLocation = find_pattern ('4C 8B DC 53 57 48 81 EC A8 00 00 00 48 89 51 08 48 8D 05 ? ? ? ? 48 89 01 48 8B D9 33 C0 48 C7 41 78 08 00 00 00 48 89 41 10 48 89 41 18 48 89 41 20 48 89 41 28 48 89 41 30 48 89 41 38 48 89 41 40 48 89 41 48 48 89 41 50 48 89 41 58 48 89 41 60 48 89 41 68 48 89 81 88 00 00 00 48 89 81 80 00 00 00 48 89 81 98 00 00 00 48 89 81 A0 00 00 00 48 89 81 A8 00 00 00')
 # function that is called from column getters to decompress: search
 # for string 'bitsToRead + bitsRight < DB2_COMPRESS_READ_TYPE_BIT_SIZE',
 # xref to that. there is likely multiple inlined copies but one that
 # just does tha assertion and some bit shifting which is called from
 # all over the place
-UncompressedColumnReturnerLoc = 0x00007FF782A72250
+UncompressedColumnReturnerLoc = find_pattern ('48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 48 83 EC 40 8B DA 8B F2 83 E3 07 41 8B F8 48 8B E9 42 8D 04 03 83 F8 40')
 # GetRowByID: start from a database object, preferably one that isn't
 # used *that* much. go over xrefs. at least one is going to call a
 # function that takes (db*, index, bool, bool*).
@@ -23,7 +33,7 @@ UncompressedColumnReturnerLoc = 0x00007FF782A72250
 #   v1 = sub_7FF7619B6CF0(a1);
 #   return sub_7FF761F1FE10((__int64)&db_CreatureModelData, v1, 0, &v3); <-- you are looking for this function
 # }
-RowReturnerLoc = 0x00007FF783030C30
+RowReturnerLoc = find_pattern ('48 89 5C 24 18 55 56 57 48 83 EC 60 41 C6 01 01 49 8B D9 80 B9 CD 01 00 00 00 41 0F B6 E8 8B F2 48 8B F9 75 ? C7 44 24 38 11 11 11 11')
 
 
 # End of config
