@@ -10,7 +10,7 @@ def _find_sane (begin, end, pattern):
   result = ida_search.find_binary(begin, end, pattern, 16, flags)
   return result if result != idc.BADADDR else None
 
-def _find_segm_fixed (name):
+def find_segm_fixed (name):
   # ida_segments'getting segment by name returns a random one
   # segment_t.name is a bogus value
   # ... wtf? that "API" is a mess.
@@ -23,7 +23,7 @@ class SearchRange:
   absolutely_everything = None
   @classmethod
   def segment(cls, name):
-    seg = _find_segm_fixed(name)
+    seg = find_segm_fixed(name)
     if not seg:
       raise Exception('unknown segment {}'.format(name))
     return seg.start_ea, seg.end_ea
