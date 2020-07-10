@@ -1,7 +1,6 @@
 import tutil
 import tcontainers
 
-# todo: these probably only exist with the ptr+id, so merge.
 class db2lookup_state (tutil.template_description):
   def __init__ (self):
     tutil.template_description.__init__ (self, "db2lookup_state", ["BaseBytes"])
@@ -41,7 +40,7 @@ vt_cdb_lookuper = tutil.add_packed_type ('vtable$%s' % (cdb_lookuper),
                                          _UNKNOWN* fun_3;
                                          _UNKNOWN* fun_4;
                                          _UNKNOWN* (__fastcall *get_current)(%s*, %s *);
-                                         %s *(__fastcall *find_first)(%s*, %s *, _QWORD id);
+                                         %s *(__fastcall *find_first)(%s*, %s *, _QWORD id); // todo: at least here db2lookup_state only
                                          void (__fastcall *find_next)(%s*, %s *);
                                          _UNKNOWN* fun_8;
                                          _UNKNOWN* fun_9;
