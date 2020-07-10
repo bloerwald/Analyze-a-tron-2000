@@ -77,8 +77,7 @@ for filename_addr in butil.find_string_all('D:\\BuildServer\\WoW\\', butil.Searc
   butil.mark_string(filename_addr, 'filename_{}'.format (fn_symbolish))
 
   if forbidden_file(filename):
-    if '\\work\\shared-checkout\\' in filename:
-      print('skipping file:', filename)
+    print('skipping file:', filename)
     continue
 
   funs = set()
