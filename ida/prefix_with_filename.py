@@ -55,8 +55,6 @@ def xrefs(to):
   return [(xref.__dict__['type'], xref.__dict__['frm'], xref.__dict__['to'], xref.__dict__['iscode']) for xref in idautils.XrefsTo (to, True)]
 
 def forbidden_file(string):
-  if not '\\work\\shared-checkout\\' in string:
-    return True
   if 'Storm\\' in string and not '.cpp' in string or 'Storm\\H\\' in string:
     return True
   if 'Common\\Singleton' in string:
