@@ -9,3 +9,10 @@ class blz_vector (tutil.template_description):
     tutil.add_packed_type ( self.make_name (parameter_names),
                             "%s* data; %s _2;" % (parameter_names[0], p2),
                             unique)
+
+blz_string = tutil.add_packed_type ('blz::string',
+                                    """
+                                    char* data;
+                                    unsigned long long size;
+                                    unsigned long long capacity;
+                                    char in_situ[16];""")
