@@ -142,7 +142,7 @@ WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               char dummy_pos_for_end_of_records;
                                               char isLoaded;
                                               char field_1CE;
-                                              char field_1CF;
+                                              char m_uniqueIndicesValid;
                                               _BYTE field_1D0;
                                               char unknown_size;
                                               """ % ( DBMeta,
