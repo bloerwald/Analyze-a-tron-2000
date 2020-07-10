@@ -1,3 +1,7 @@
+import ida_auto
+import ida_bytes
+import ida_funcs
+import ida_kernwin
 import idautils
 import re
 import struct
@@ -48,6 +52,23 @@ try:
 except ImportError:
   pass
 
+user_pos = ida_kernwin.get_screen_ea()
+after_function_before_user_pos = ida_funcs.get_prev_func(user_pos).end_ea + 1
+before_function_after_user_pos = ida_funcs.get_next_func(user_pos).start_ea - 1
+hopefully_a_sane_start_of_function = (after_function_before_user_pos & ~0x0F) + 0x10
+make_fun_pos = None
+if ida_bytes.is_code(ida_bytes.get_flags (hopefully_a_sane_start_of_function)):
+  make_fun_pos = hopefully_a_sane_start_of_function
+
+def re_analyze_relevant_range():
+  ida_bytes.del_items(after_function_before_user_pos,
+                      0,
+                      before_function_after_user_pos - after_function_before_user_pos)
+  if not make_fun_pos is None:
+    assume_code_at(make_fun_pos)
+  else:
+    run_autoanalysis(after_function_before_user_pos, before_function_after_user_pos)
+
 def run_autoanalysis(start, end = None):
   if not end:
     end = start + 1
@@ -85,11 +106,6 @@ def bytes(ea, count = None):
     count -= 1
     ea += 1
   return result
-
-def make_unknown(start, end):
-  MakeUnknown(start, end - start, 0)
-def make_segment_unknown(ea):
-  make_unknown(SegStart(ea), SegEnd(ea))
 
 def nop(ea, c = None):
   print("nop (" + hex(ea) + ", " + (str(c) if c else "whole_instruction") + ")")
@@ -134,7 +150,7 @@ def jump_op_string_to_ea(ea):
 
 def redirect_jump(ea, target):
   print("redirect_jump (" + hex(ea) + ", " + hex(target) + ")")
-  make_unk(target)
+  ida_bytes.del_items(target)
   run_autoanalysis(target)
   patch_ins(ea, idc.GetMnem(ea) + " " + name_at(target))
 
@@ -155,12 +171,9 @@ def non_nop_after_ins(ea):
 def make_jump_unconditional(ea):
   print("make_jump_unconditional (" + hex(ea) + ")")
   target = jump_op_string_to_ea(ea)
-  make_unk(target)
+  ida_bytes.del_items(target)
   run_autoanalysis(target)
   patch_ins(ea, "jmp " + name_at(target))
-
-def make_unk(ea):
-  idc.MakeUnknown(ea, 1, 0)
 
 def is_non_NOP_nop(current_ea):
   # <mov> x, x
@@ -174,7 +187,8 @@ def is_non_NOP_nop(current_ea):
   return False
 
 def assume_code_at(ea):
-  idc.MakeCode(ea)
+  ida_bytes.del_items(ea, ida_bytes.DELIT_EXPAND)
+  ida_auto.auto_make_code(ea)
   run_autoanalysis(ea)
 
 def maybe_simplify(current_ea):
@@ -230,8 +244,8 @@ def maybe_simplify(current_ea):
     mnem = idc.GetMnem(current_ea)
     target = jump_op_string_to_ea(current_ea)
     if target < current_ea and (current_ea - target) < 10 and idc.GetMnem(target) is "":
-      make_unk(target)
       assume_code_at(target)
+      re_analyze_relevant_range()
       target = next_non_nop_NOT_JUMPING(target)
       if idc.GetMnem(target) == mnem:
         actual_target = jump_op_string_to_ea(target)
@@ -247,9 +261,9 @@ def maybe_simplify(current_ea):
     target = jump_op_string_to_ea(current_ea)
     if target:
       if idc.GetMnem(target) == "":
-        make_unknown(reanalyze_range_begin(current_ea), reanalyze_range_end(current_ea))
         assume_code_at(target)
         assume_code_at(current_ea)
+        re_analyze_relevant_range()
       any_target = next_non_nop_FOLLOWING_JUMPS(target)
       maybe_jmp_target = next_non_nop_NOT_JUMPING(target)
       if idc.GetMnem(any_target) == mnem:
@@ -310,11 +324,11 @@ def maybe_simplify(current_ea):
 
   return None
 
-# customization point: maybe only do function start!
+
 def reanalyze_range_begin(ea):
-    return 0x7ff66a759db0 ## 0x7FF669D2C2E0 #  0x7FF669D2C890  #SegStart(ea)
+    return ida_funcs.get_prev_func(ea).end_ea + 1
 def reanalyze_range_end(ea):
-    return 0x7ff66a75a750 ## 0x7FF669D2C7B7 # 0x7FF669D2D103  #SegEnd(ea)
+    return ida_funcs.get_next_func(ea).start_ea - 1
 
 def simplify_as_much_as_possible(current_ea):
   action = maybe_simplify(current_ea)
@@ -327,11 +341,9 @@ def simplify_as_much_as_possible(current_ea):
   return [non_nop_after_ins(current_ea)]
 
 for _ in [0, 1, 2]:
-  leads = [ScreenEA()]
+  leads = [user_pos]
   while leads:
     lead = leads[0]
     leads = leads[1:] + simplify_as_much_as_possible(lead)
 
-  make_unknown(reanalyze_range_begin(ScreenEA()), reanalyze_range_end(ScreenEA()))
-  MakeFunction(reanalyze_range_begin(ScreenEA()))
-  run_autoanalysis(reanalyze_range_begin(ScreenEA()), reanalyze_range_end(ScreenEA()))
+  re_analyze_relevant_range()
