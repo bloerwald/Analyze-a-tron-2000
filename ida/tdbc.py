@@ -96,7 +96,7 @@ DBMeta = tutil.add_unpacked_type ('DBMeta',
                                    void *field_98;
                                    void *field_A0;""")
 
-WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base2',
+WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               """
                                               void *vtable; // todo
                                               const %s *m_meta;
