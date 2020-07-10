@@ -73,3 +73,7 @@ def mark_string(ea, name = None):
   if name:
     ida_name.set_name (ea, name, ida_name.SN_CHECK | ida_name.SN_AUTO)
   idc.apply_type (ea, idc.parse_decl('char const a[]', 0), idc.TINFO_DEFINITE)
+
+# a IDA clickable string for the given address
+def eastr(ea):
+  return hex(ea)[:-1]
