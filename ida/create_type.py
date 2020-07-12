@@ -4,11 +4,10 @@ import tdbc
 import tutil
 
 def main():
-  chosen_template = gutil.choose_one ('Template class',
-                                      [cls.__name__ for cls in tutil.template_description.__subclasses__()])
+  chosen_template = gutil.choose_one ('Template class', tutil.template_description.templates())
   if not chosen_template:
     return
-  template = globals()[chosen_template]()
+  template = tutil.template_description.template (chosen_template)
 
   name_pref = chosen_template + '$'
 

@@ -40,11 +40,11 @@ def maybe_make_dummy_type_with_known_size (name, size):
   return name
 
 def maybe_make_templated_type (name, parameters):
-  template = globals()[name]()
+  template = template_description.template(name)
   template.create_types (parameters, False)
   return template.make_name (parameters)
 def make_templated_type (name, parameters):
-  template = globals()[name]()
+  template = template_description.template(name)
   template.create_types (parameters, True)
   return template.make_name (parameters)
 
@@ -68,6 +68,16 @@ class template_description (object):
     for parameter in parameter_names:
       name += "$" + parameter.replace (" const*", "_cptr").replace (" *", "_ptr").replace ("*", "_ptr").replace (" ", "_")
     return name
+
+  @classmethod
+  def templates(cls):
+    return [subcls.__name__ for subcls in cls.__subclasses__()]
+  @classmethod
+  def template(cls, name):
+    for subcls in cls.__subclasses__():
+      if subcls.__name__ == name:
+        return subcls()
+    return None
 
 def create_template_and_make_name (template, parameters):
   template.create_types (parameters, False)
