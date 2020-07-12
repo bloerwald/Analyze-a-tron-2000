@@ -39,14 +39,13 @@ def maybe_make_dummy_type_with_known_size (name, size):
     import_type (cvar.idati, -1, name)
   return name
 
+def create_template_and_make_name (template, parameters, unique = False):
+  template.create_types (parameters, unique)
+  return template.make_name (parameters)
 def maybe_make_templated_type (name, parameters):
-  template = template_description.template(name)
-  template.create_types (parameters, False)
-  return template.make_name (parameters)
+  return create_template_and_make_name(template_description.template(name), parameters, False)
 def make_templated_type (name, parameters):
-  template = template_description.template(name)
-  template.create_types (parameters, True)
-  return template.make_name (parameters)
+  return create_template_and_make_name(template_description.template(name), parameters, True)
 
 class template_description (object):
   def __init__ (self, name, parameters):
@@ -78,10 +77,6 @@ class template_description (object):
       if subcls.__name__ == name:
         return subcls()
     return None
-
-def create_template_and_make_name (template, parameters):
-  template.create_types (parameters, False)
-  return template.make_name (parameters)
 
 def integral_for_bytes (bytes):
   known = {1: '__int8', 2: '__int16', 4: '__int32', 8: '__int64', 16: '__int128'}
