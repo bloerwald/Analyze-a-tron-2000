@@ -14,12 +14,15 @@ def add_packed_type (name, decl, unique = False):
     print "## DECLARED ", name
   return name
 
-def add_unpacked_type (name, decl, unique = False):
+def add_unpacked_type (name, decl, unique = False, alignment = None):
   if ida_struct.get_struc_id (name) != BADADDR:
     if unique:
       raise RuntimeError ("struct %s already exists" % (name))
   else:
-    idc_parse_types ("""struct %s { %s };""" % (name, decl), 0)
+    align_str = ''
+    if not alignment is None:
+      align_str = '__declspec(align({})) '.format(alignment)
+    idc_parse_types ("""struct %s %s { %s };""" % (align_str, name, decl), 0)
     import_type (cvar.idati, -1, name)
     print "## DECLARED ", name
   return name
