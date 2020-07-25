@@ -31,36 +31,36 @@ class db2lookup (tutil.template_description):
 # Let's hope nobody uses these for relevant analysis...
 db2lookup_8 = tutil.create_template_and_make_name (db2lookup(), ['8'])
 db2lookup_16 = tutil.create_template_and_make_name (db2lookup(), ['16'])
-cdb_lookuper = tutil.maybe_make_dummy_type ('WowClientDB2_Base_Lookuper')
-vt_cdb_lookuper = tutil.add_packed_type ('vtable$%s' % (cdb_lookuper),
-                                         """
-                                         _UNKNOWN* fun_0;
-                                         _UNKNOWN* fun_1;
-                                         _UNKNOWN* fun_2;
-                                         _UNKNOWN* fun_3;
-                                         _UNKNOWN* fun_4;
-                                         _UNKNOWN* (__fastcall *get_current)(%s*, %s *);
-                                         %s *(__fastcall *find_first)(%s*, %s *, _QWORD id); // todo: at least here db2lookup_state only
-                                         void (__fastcall *find_next)(%s*, %s *);
-                                         _UNKNOWN* fun_8;
-                                         _UNKNOWN* fun_9;
-                                         _UNKNOWN* fun_10;
-                                         %s *(__fastcall *fun_11)(%s *, %s *);
-                                         _UNKNOWN* fun_12;
-                                         _UNKNOWN* fun_13;
-                                         """ % (cdb_lookuper, db2lookup_8,
-                                                db2lookup_8, cdb_lookuper, db2lookup_8,
-                                                cdb_lookuper, db2lookup_8,
-                                                db2lookup_16, cdb_lookuper, db2lookup_16))
-cdb_lookuper = tutil.add_packed_type ('%s' % (cdb_lookuper),
-                                      '%s *vtable; char unknown_size;' % (vt_cdb_lookuper))
+cdb_lookuper = tutil.add_packed_type ('WowClientDB2_Base_Lookuper',
+                                      """
+                                      virtual _UNKNOWN* fun_0();
+                                      virtual _UNKNOWN* fun_1();
+                                      virtual _UNKNOWN* fun_2();
+                                      virtual _UNKNOWN* fun_3();
+                                      virtual _UNKNOWN* fun_4();
+                                      virtual _UNKNOWN* (__fastcall *get_current)(%s *);
+                                      virtual %s* find_first(%s*, _QWORD id); // todo: at least here db2lookup_state only
+                                      virtual void find_next(%s*);
+                                      virtual _UNKNOWN* fun_8();
+                                      virtual _UNKNOWN* fun_9();
+                                      virtual _UNKNOWN* fun_10();
+                                      virtual %s* fun_11(%s *);
+                                      virtual _UNKNOWN* fun_12();
+                                      virtual _UNKNOWN* fun_13();
+
+                                      char unknown_size;
+                                      """ % (db2lookup_8,
+                                             db2lookup_8, db2lookup_8,
+                                             db2lookup_8,
+                                             db2lookup_16, db2lookup_16))
 
 DB2RecordCallback = tutil.maybe_make_dummy_type_with_known_size ('DB2RecordCallback', 16)
 DB2TableEvent = tutil.maybe_make_dummy_type ('DB2TableEvent')
-WowClientDB2_Base__IndexDataMap = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base::IndexDataMap', 40)
-WowClientDB2_Base__UniqueIdxByInt = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base::UniqueIdxByInt', 40)
-WowClientDB2_Base__UniqueIdxByString = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base::UniqueIdxByString', 40)
-WowClientDB2_Base__AsyncSection = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base::AsyncSection', 40)
+# note: NOT WCDB2B::, that triggers a bug in parsing in IDA, resulting in a WCDB2B::T rather than vector<WCDB2B::T>...
+WowClientDB2_Base__IndexDataMap = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_IndexDataMap', 40)
+WowClientDB2_Base__UniqueIdxByInt = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_UniqueIdxByInt', 40)
+WowClientDB2_Base__UniqueIdxByString = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_UniqueIdxByString', 40)
+WowClientDB2_Base__AsyncSection = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_AsyncSection', 40)
 
 DBMeta = tutil.add_unpacked_type ('DBMeta',
                                    """
@@ -98,7 +98,7 @@ DBMeta = tutil.add_unpacked_type ('DBMeta',
 
 WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               """
-                                              void *vtable; // todo
+                                              virtual void* vf0();
                                               const %s *m_meta;
                                               %s m_columnMeta;
                                               %s field_28;
