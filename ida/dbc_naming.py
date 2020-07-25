@@ -55,6 +55,8 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
     name = idc.GetString(nameAddr, -1)
     print(name)
 
+    MakeName (cutil.function_containing(codeRef), 'staticctor_db_{}'.format(name))
+
     MakeUnknown(metaTableAddr, 1, DOUNK_SIMPLE)
     MakeName(metaTableAddr, "dbMeta_" + name)
     SetType (metaTableAddr, tdbc.DBMeta)
@@ -165,6 +167,7 @@ for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
 
   # todo: check that we're not naming an inlined function, e.g. by function size
 
+  # todo: dbd the actual column name
   new_name = '{}::column_{}'.format (match[1], match[0])
 
   if not new_name in column_getters:
