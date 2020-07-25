@@ -38,7 +38,7 @@ def strip_buildserver_fs_prefix(filename):
   filename = filename.replace ('\\', '/')
   had_prefix = False
   for prefix, replacement in prefixes:
-    repl = re.sub (prefix, replacement, filename)
+    repl = re.sub (prefix, replacement, filename, flags = re.IGNORECASE)
     if repl != filename:
       filename = repl
       had_prefix = True
