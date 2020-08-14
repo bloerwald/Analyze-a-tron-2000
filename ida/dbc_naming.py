@@ -29,9 +29,16 @@ GetInMemoryFieldOffsetFromMetaLoc = butil.find_pattern ('48 89 5C 24 08 57 48 83
 # }
 RowReturnerLoc = butil.find_pattern ('48 89 5C 24 18 55 56 57 48 83 EC 60 41 C6 01 01 49 8B D9 80 B9 CD 01 00 00 00 41 0F B6 E8 8B F2 48 8B F9 75 ? C7 44 24 38 11 11 11 11', butil.SearchRange.segment('.text'))
 
+# clientdb_base dtor: take any clientdb_base ctor, reference the db
+# object, the static ctor is usually first, the static dtor last. in
+# the static dtor, there should be one function the db object is
+# passed to. Alternatively go by the vtable that the ctor sets.
+clientdb_base_dtor_loc = 0x07FF73D680AD0 # butil.find_pattern ('48 89 5C 24 08 57 48 83 EC 40 33 FF 48 8D 05 ? ? ? ? 48 8b d9 48 89 01 40 38 b9 cd 01 00 00', butil.SearchRange.segment('.text'))
+
 MakeName(DB2ConstructorLocation, tdbc.WowClientDB2_Base + "::ctor")
 MakeName(GetInMemoryFieldOffsetFromMetaLoc, tdbc.WowClientDB2_Base + '::GetInMemoryFieldOffsetFromMeta')
 MakeName(RowReturnerLoc, tdbc.WowClientDB2_Base + "::GetRowByID")
+MakeName (clientdb_base_dtor_loc, tdbc.WowClientDB2_Base + "::dtor")
 
 for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
     metaRef = codeRef - 14
@@ -77,6 +84,25 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
         functionName = "GetDB" + name + "Pointer"
         MakeName(db2ObjectRef.frm, functionName)
         SetType(db2ObjectRef.frm, tdbc.WowClientDB2_Base + " *__fastcall " + functionName + "()")
+
+for codeRef in CodeRefsTo(clientdb_base_dtor_loc, 0):
+  match = cutil.matches_any(codeRef,
+                            ( [ (-0x0B, ['lea',  'rcx', 'db_.*'  ]),
+                                (-0x04, ['add',  'rsp', '.*'  ]),
+                                (+0x00, ['jmp',  tdbc.WowClientDB2_Base + '__dtor']),
+                              ],
+                              [ (0, 1, lambda val: Name(val)[len('db_'):]),
+                              ],
+                            ),
+                          )
+
+  if match is None:
+    print ('static dtors: skipping {}: unknown pattern'.format (hex (codeRef)))
+    continue
+  # todo: check that we're not naming a bigger static dtor, e.g. by function size
+  name = match[0]
+
+  MakeName (cutil.function_containing(codeRef), 'staticdtor_db_{}'.format(name))
 
 column_getters = {}
 
