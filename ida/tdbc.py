@@ -71,7 +71,7 @@ DBMeta = tutil.add_unpacked_type ('DBMeta',
                                    int hotFixFieldCount;
                                    int field_18;
                                    char sparseTable;
-                                   int *field_20;
+                                   unsigned int *field_20;
                                    void *field_28;
                                    void *field_30;
                                    void *field_38;
