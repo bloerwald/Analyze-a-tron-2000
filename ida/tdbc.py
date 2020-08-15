@@ -1,5 +1,8 @@
-import tutil
+import butil
+import ida_typeinf
+import idc
 import tcontainers
+import tutil
 
 class db2lookup_state (tutil.template_description):
   def __init__ (self):
@@ -62,39 +65,55 @@ WowClientDB2_Base__UniqueIdxByInt = tutil.maybe_make_dummy_type_with_known_size 
 WowClientDB2_Base__UniqueIdxByString = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_UniqueIdxByString', 40)
 WowClientDB2_Base__AsyncSection = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_AsyncSection', 40)
 
+DBMeta_intidx = tutil.add_unpacked_type('DBMeta_intidx',
+                                        """
+                                        int column;
+                                        char use_null_column_content;
+                                        __int64 null_column_content;
+                                        """,
+                                        False,
+                                        0x10)
+
+
+DBMeta_stridx = tutil.add_unpacked_type('DBMeta_stridx',
+                                        """
+                                        int column;
+                                        char use_null_column_content;
+                                        char const* null_column_content;
+                                        """,
+                                        False,
+                                        0x10)
+
 DBMeta = tutil.add_unpacked_type ('DBMeta',
                                    """
-                                   const char *tableName;
+                                   const char* tableName;
                                    int fdid;
-                                   int file_columns;
-                                   int field_10;
+                                   int fieldCount;
+                                   int record_size;
                                    int hotFixFieldCount;
-                                   int field_18;
+                                   int id_column;
                                    char sparseTable;
-                                   unsigned int *field_20;
-                                   void *field_28;
-                                   void *field_30;
-                                   void *field_38;
-                                   unsigned int *field_40;
-                                   int *fieldTypes;
-                                   void *field_50;
-                                   _BYTE gap58[4];
+                                   unsigned int* hotFixField_offsets;
+                                   unsigned int* hotFixField_sizes;
+                                   unsigned int* hotFixField_types;
+                                   unsigned int* hotFixField_flags;
+                                   unsigned int* fieldSizes;
+                                   unsigned int* fieldTypes;
+                                   unsigned int* fieldFlags;
+                                   char flags_58;
                                    int m_tableHash;
-                                   int field_60;
+                                   int sibling_tableHash;
                                    int layoutHash;
-                                   int field_68;
+                                   char flags_68;
                                    int nbUniqueIdxByInt;
                                    int nbUniqueIdxByString;
-                                   int field_74;
-                                   void *field_78;
-                                   int field_80;
-                                   int field_84;
-                                   int field_88;
-                                   int field_8C;
-                                   int field_90;
-                                   int field_94;
-                                   void *field_98;
-                                   void *field_A0;""")
+                                   {intidxt}* uniqueIdxByInt;
+                                   {stridxt}* uniqueIdxByString;
+                                   char flags_88;
+                                   int hotFixFieldRelation;
+                                   int fieldRelation;
+                                   void* sortFunc;
+                                   void* sortFuncIndirect;""".format(stridxt=DBMeta_stridx,intidxt=DBMeta_intidx))
 
 WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               """
@@ -159,3 +178,68 @@ WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                                       tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__UniqueIdxByInt]),
                                                       tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__UniqueIdxByString]),
                                                       tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__AsyncSection])))
+
+def make_db2meta(ea):
+  ti = ida_typeinf.tinfo_t()
+  ida_typeinf.parse_decl (ti, None, DBMeta + ' a;', 0)
+
+  def dword_mem(name):
+    m = ida_typeinf.udt_member_t()
+    m.name = name
+    if ti.find_udt_member (m, ida_typeinf.STRMEM_NAME) == -1:
+      raise Exception ('unknown DBMeta member {}'.format (name))
+    return idc.Dword(ea + m.offset / 8)
+  def qword_mem(name):
+    m = ida_typeinf.udt_member_t()
+    m.name = name
+    if ti.find_udt_member (m, ida_typeinf.STRMEM_NAME) == -1:
+      raise Exception ('unknown DBMeta member {}'.format (name))
+    return idc.Qword(ea + m.offset / 8)
+
+  nameaddr = qword_mem ('tableName')
+  name = idc.GetString (nameaddr)
+
+  butil.mark_string (nameaddr, 'dbMeta_{}_tableName'.format(name))
+
+  hfc = dword_mem('hotFixFieldCount')
+  for f in ['hotFixField_offsets', 'hotFixField_sizes',
+            'hotFixField_types', 'hotFixField_flags',]:
+    butil.force_array( qword_mem(f),
+                       'unsigned int',
+                       'dbMeta_{}_{}'.format(name, f),
+                       hfc)
+
+  fc = dword_mem('fieldCount')
+  for f in ['fieldSizes', 'fieldTypes', 'fieldFlags']:
+    butil.force_array( qword_mem(f),
+                       'unsigned int',
+                       'dbMeta_{}_{}'.format(name, f),
+                       fc)
+
+  if dword_mem('nbUniqueIdxByInt'):
+    num = dword_mem('nbUniqueIdxByInt')
+    butil.force_array( qword_mem('uniqueIdxByInt'),
+                       DBMeta_intidx,
+                       'dbMeta_{}_uniqueIdxByInt'.format(name),
+                       num)
+
+  if dword_mem('nbUniqueIdxByString'):
+    num = dword_mem('nbUniqueIdxByString')
+    butil.force_array( qword_mem('uniqueIdxByString'),
+                       DBMeta_stridx,
+                       'dbMeta_{}_uniqueIdxByString'.format(name),
+                       num)
+
+  rec = tutil.maybe_make_dummy_type_with_known_size ('{}Rec'.format(name),
+                                                     dword_mem ('record_size'))
+
+  if qword_mem ('sortFunc'):
+    fp = qword_mem ('sortFunc')
+    butil.force_function(fp, 'bool f({rec} const*, {rec} const*)'.format(rec=rec), '{}::sort'.format(rec))
+  if qword_mem ('sortFuncIndirect'):
+    fp = qword_mem ('sortFuncIndirect')
+    butil.force_function(fp, 'bool f({rec} const* const*, {rec} const* const*)'.format(rec=rec), '{}::sortIndirect'.format(rec))
+
+  butil.force_variable (ea, DBMeta, 'dbMeta_{}'.format(name))
+
+  return name

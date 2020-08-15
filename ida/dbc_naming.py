@@ -41,49 +41,43 @@ MakeName(RowReturnerLoc, tdbc.WowClientDB2_Base + "::GetRowByID")
 MakeName (clientdb_base_dtor_loc, tdbc.WowClientDB2_Base + "::dtor")
 
 for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
-    metaRef = codeRef - 14
-    dbObjectRef = codeRef - 7
+  match = cutil.matches_any(codeRef,
+                            ( [ (-0x0E, ['lea',  'rdx', '.*'                       ]),
+                                (-0x07, ['lea',  'rcx', '.*'                       ]),
+                                (+0x00, ['call',  tdbc.WowClientDB2_Base + '__ctor']),
+                              ],
+                              [ (0, 1, lambda val: val),
+                                (1, 1, lambda val: val),
+                              ],
+                            ),
+                           )
 
-    # If these aren't lea then it's not a proper target
-    # TODO: Handle sparse and other refs
-    if GetMnem(dbObjectRef) != "lea" and GetMnem(metaRef) != "lea":
-        continue
+  if match is None:
+    print ('static ctors: skipping {}: unknown pattern'.format (hex (codeRef)))
+    continue
+  # todo: check that we're not naming a bigger static ctor, e.g. by function size
+  meta = match[0]
+  dbobject = match[1]
 
-    # print(hex(codeRef), hex(dbObjectRef), hex(metaRef))
-    dbObjectAddr = GetOperandValue(dbObjectRef, 1)
-    metaTableAddr = GetOperandValue(metaRef, 1)
-    # print("dbObject @ ", dbObjectAddr)
-    # print("meta @ ", metaTableAddr)
+  name = tdbc.make_db2meta (meta)
 
-    # Get address of DB2 name
-    nameAddr = idc.Qword(metaTableAddr)
+  butil.force_function (cutil.function_containing(codeRef), 'void f()', 'staticctor_db_{}'.format(name))
+  butil.force_variable (dbobject, tdbc.WowClientDB2_Base, 'db_{}'.format(name))
 
-    # Get DB2 name
-    name = idc.GetString(nameAddr, -1)
-    print(name)
+  for db2ObjectRef in CodeRefsTo(dbobject, 0):
+    match = cutil.matches_any(db2ObjectRef,
+                              ( [ (+0x00, ['lea',  'rax', 'db_.*'  ]),
+                                  (+0x07, ['retn'                  ]),
+                                ],
+                                [],
+                              ),
+                             )
+    if match is None:
+      continue
 
-    MakeName (cutil.function_containing(codeRef), 'staticctor_db_{}'.format(name))
-
-    MakeUnknown(metaTableAddr, 1, DOUNK_SIMPLE)
-    MakeName(metaTableAddr, "dbMeta_" + name)
-    SetType (metaTableAddr, tdbc.DBMeta)
-
-    MakeUnknown(dbObjectAddr, 1, DOUNK_SIMPLE)
-    MakeName(dbObjectAddr, "db_" + name)
-    SetType(dbObjectAddr, tdbc.WowClientDB2_Base)
-
-    for db2ObjectRef in XrefsTo(dbObjectAddr, 0):
-        if GetMnem(db2ObjectRef.frm) != "lea" or GetOpnd(db2ObjectRef.frm, 0) != "rax":
-            continue
-
-        if GetMnem(db2ObjectRef.frm + 7) != "retn":
-            continue
-
-        MakeUnknown(db2ObjectRef.frm, 1, DOUNK_SIMPLE)
-        MakeFunction(db2ObjectRef.frm)
-        functionName = "GetDB" + name + "Pointer"
-        MakeName(db2ObjectRef.frm, functionName)
-        SetType(db2ObjectRef.frm, tdbc.WowClientDB2_Base + " *__fastcall " + functionName + "()")
+    butil.force_function (db2ObjectRef.frm,
+                          '{db}* __fastcall a()'.format(db=tdbc.WowClientDB2_Base),
+                          'GetDB{name}Pointer'.format(name=name))
 
 for codeRef in CodeRefsTo(clientdb_base_dtor_loc, 0):
   match = cutil.matches_any(codeRef,
