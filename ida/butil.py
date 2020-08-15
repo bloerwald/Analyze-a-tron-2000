@@ -3,6 +3,7 @@ import ida_ida
 import ida_name
 import ida_search
 import ida_segment
+import ida_typeinf
 import idc
 
 def _find_sane (begin, end, pattern):
@@ -71,8 +72,41 @@ def mark_string(ea, name = None):
                        strlen + 1)
   ida_bytes.create_strlit(ea, strlen + 1, idc.get_inf_attr(idc.INF_STRTYPE))
   if name:
-    ida_name.set_name (ea, name, ida_name.SN_CHECK | ida_name.SN_AUTO)
+    ida_name.set_name (ea, name, ida_name.SN_CHECK)
   idc.apply_type (ea, idc.parse_decl('char const a[]', 0), idc.TINFO_DEFINITE)
+  return idc.GetString (ea, -1)
+
+def force_variable(ea, type, name):
+  t = ida_typeinf.tinfo_t()
+  ida_typeinf.parse_decl(t, None, '{} a;'.format(type), 0)
+  ida_bytes.del_items (ea,
+                       ida_bytes.DELIT_EXPAND | ida_bytes.DELIT_DELNAMES | ida_bytes.DELIT_NOCMT,
+                       t.get_size())
+  ida_name.set_name (ea, name, ida_name.SN_CHECK)
+  idc.apply_type (ea, idc.parse_decl('{} a;'.format(type), 0), idc.TINFO_DEFINITE)
+
+def force_array(ea, type, name, count = None):
+  t = ida_typeinf.tinfo_t()
+  ida_typeinf.parse_decl(t, None, '{} a;'.format(type), 0)
+  ida_bytes.del_items (ea,
+                       ida_bytes.DELIT_EXPAND | ida_bytes.DELIT_DELNAMES | ida_bytes.DELIT_NOCMT,
+                       t.get_size() * (1 if count is None else count))
+  ida_name.set_name (ea, name, ida_name.SN_CHECK)
+  idc.apply_type (ea, idc.parse_decl('{} a[{}];'.format(type, '' if count is None else str(count)), 0), idc.TINFO_DEFINITE)
+
+def force_function(ea, type, name):
+  idc.MakeUnknown(ea, 1, idc.DOUNK_SIMPLE)
+  idc.MakeFunction(ea)
+  idc.MakeName(ea, name)
+  idc.SetType(ea, type + ';')
+  #ida_bytes.del_items (ea,
+  #                     ida_bytes.DELIT_EXPAND | ida_bytes.DELIT_DELNAMES | ida_bytes.DELIT_NOCMT,
+  #                     1)
+  #idc.MakeFunction(ea) # todo: ida_bytes version
+  #ida_name.set_name (ea, name, ida_name.SN_CHECK)
+  #idc.apply_type (ea, idc.parse_decl(type, 0), idc.TINFO_DEFINITE)
+
+
 
 # a IDA clickable string for the given address
 def eastr(ea):
