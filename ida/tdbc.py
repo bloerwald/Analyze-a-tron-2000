@@ -99,7 +99,7 @@ DBMeta = tutil.add_unpacked_type ('DBMeta',
 WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               """
                                               virtual void* vf0();
-                                              const %s *m_meta;
+                                              const %s* m_meta;
                                               %s m_columnMeta;
                                               %s field_28;
                                               %s field_40;
@@ -110,7 +110,7 @@ WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               __int64 m_pendingPatches_size;
                                               float field_90;
                                               int field_94;
-                                              %s *m_parentLookup;
+                                              %s* m_parentLookup;
                                               %s recordCallbacks;
                                               %s tableEvents;
                                               _QWORD field_D0;
@@ -120,14 +120,14 @@ WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               int field_EC;
                                               %s bucket_infos;
                                               %s field_108;
-                                              void *m_fileHeader;
-                                              void *field_128;
-                                              void *m_rawData;
-                                              void *m_rawDataCopy;
-                                              %s *lookuper;
+                                              void* m_fileHeader;
+                                              void* field_128;
+                                              void* m_rawData;
+                                              void* m_rawDataCopy;
+                                              %s* lookuper;
                                               %s uniqueidxbyint;
                                               %s uniqueidxbystring;
-                                              void *field_178;
+                                              void* field_178;
                                               %s asyncSections;
                                               int field_198;
                                               int m_numFileRecords;

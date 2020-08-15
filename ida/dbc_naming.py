@@ -87,14 +87,14 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
 
 for codeRef in CodeRefsTo(clientdb_base_dtor_loc, 0):
   match = cutil.matches_any(codeRef,
-                            ( [ (-0x0B, ['lea',  'rcx', 'db_.*'  ]),
-                                (-0x04, ['add',  'rsp', '.*'  ]),
+                            ( [ (-0x0B, ['lea',  'rcx', 'db_.*'                   ]),
+                                (-0x04, ['add',  'rsp', '.*'                      ]),
                                 (+0x00, ['jmp',  tdbc.WowClientDB2_Base + '__dtor']),
                               ],
                               [ (0, 1, lambda val: Name(val)[len('db_'):]),
                               ],
                             ),
-                          )
+                           )
 
   if match is None:
     print ('static dtors: skipping {}: unknown pattern'.format (hex (codeRef)))
@@ -110,20 +110,20 @@ column_getters = {}
 for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
   match = cutil.matches_any(codeRef,
                             ( [ (-0x0A, ['call', 'GetDB.*Pointer']),
-                                (-0x05, ['xor',  'edx', 'edx'  ]),
-                                (-0x03, ['mov',  'rcx', 'rax'  ]),
-                                (+0x00, ['call', '.*'          ]),
-                                (+0x05, ['mov',  'eax', 'eax'  ]),
+                                (-0x05, ['xor',  'edx', 'edx'    ]),
+                                (-0x03, ['mov',  'rcx', 'rax'    ]),
+                                (+0x00, ['call', '.*'            ]),
+                                (+0x05, ['mov',  'eax', 'eax'    ]),
                               ],
                               [ 0,
                                 (0, 0, lambda val: Name(val)[len('GetDB'):-len('Pointer')]),
                               ],
                             ),
                             ( [ (-0x0D, ['call', 'GetDB.*Pointer']),
-                                (-0x08, ['mov',  'edx', '.*'   ]),
-                                (-0x03, ['mov',  'rcx', 'rax'  ]),
-                                (+0x00, ['call', '.*'          ]),
-                                (+0x05, ['mov',  'eax', 'eax'  ]),
+                                (-0x08, ['mov',  'edx', '.*'     ]),
+                                (-0x03, ['mov',  'rcx', 'rax'    ]),
+                                (+0x00, ['call', '.*'            ]),
+                                (+0x05, ['mov',  'eax', 'eax'    ]),
                               ],
                               [ (1, 1, lambda val: val),
                                 (0, 0, lambda val: Name(val)[len('GetDB'):-len('Pointer')]),
@@ -153,12 +153,12 @@ for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
                             # to be before the "useless move". as
                             # these are pretty random, one may need to
                             # add more variations here for other builds
-                            ( [ (-0x09, ['xor',  'edx', 'edx'  ]),
-                                (-0x07, ['lea',  'rcx', 'db_.*']),
-                                (+0x00, ['call', '.*'          ]),
+                            ( [ (-0x09, ['xor',  'edx', 'edx'       ]),
+                                (-0x07, ['lea',  'rcx', 'db_.*'     ]),
+                                (+0x00, ['call', '.*'               ]),
                                 (+0x05, ['mov',  'rbx', '\[rsp+.*\]']),
                                 (+0x0A, ['mov',  'rsi', '\[rsp+.*\]']),
-                                (+0x0F, ['mov',  'eax', 'eax'  ]),
+                                (+0x0F, ['mov',  'eax', 'eax'       ]),
                               ],
                               [ 0,
                                 (1, 1, lambda val: Name(val)[len('db_'):]),
