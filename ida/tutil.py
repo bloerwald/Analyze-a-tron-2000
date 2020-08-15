@@ -35,7 +35,7 @@ def maybe_make_dummy_type (name):
 
 def maybe_make_dummy_type_with_known_size (name, size):
   if ida_struct.get_struc_id (name) == BADADDR:
-    idc_parse_types ("struct %s { char dummy[%s]; }" % (name, size), 0)
+    idc_parse_types ("struct %s { char dummy[%s]; };" % (name, size), 0)
     import_type (cvar.idati, -1, name)
   return name
 
