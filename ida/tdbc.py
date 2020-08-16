@@ -205,28 +205,28 @@ def make_db2meta(ea):
   for f in ['hotFixField_offsets', 'hotFixField_sizes',
             'hotFixField_types', 'hotFixField_flags',]:
     butil.force_array( qword_mem(f),
-                       'unsigned int',
+                       'unsigned int const',
                        'dbMeta_{}_{}'.format(name, f),
                        hfc)
 
   fc = dword_mem('fieldCount')
   for f in ['fieldSizes', 'fieldTypes', 'fieldFlags']:
     butil.force_array( qword_mem(f),
-                       'unsigned int',
+                       'unsigned int const',
                        'dbMeta_{}_{}'.format(name, f),
                        fc)
 
   if dword_mem('nbUniqueIdxByInt'):
     num = dword_mem('nbUniqueIdxByInt')
     butil.force_array( qword_mem('uniqueIdxByInt'),
-                       DBMeta_intidx,
+                       '{} const'.format (DBMeta_intidx),
                        'dbMeta_{}_uniqueIdxByInt'.format(name),
                        num)
 
   if dword_mem('nbUniqueIdxByString'):
     num = dword_mem('nbUniqueIdxByString')
     butil.force_array( qword_mem('uniqueIdxByString'),
-                       DBMeta_stridx,
+                       '{} const'.format (DBMeta_stridx),
                        'dbMeta_{}_uniqueIdxByString'.format(name),
                        num)
 
@@ -240,6 +240,6 @@ def make_db2meta(ea):
     fp = qword_mem ('sortFuncIndirect')
     butil.force_function(fp, 'bool f({rec} const* const*, {rec} const* const*)'.format(rec=rec), '{}::sortIndirect'.format(rec))
 
-  butil.force_variable (ea, DBMeta, 'dbMeta_{}'.format(name))
+  butil.force_variable (ea, '{} const'.format(DBMeta), 'dbMeta_{}'.format(name))
 
   return name
