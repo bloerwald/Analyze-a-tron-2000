@@ -124,6 +124,9 @@ def findWoWClient2Constructor():
                 found = True
                 break
 
+            if found:
+                break
+
 
     if not found:
         return 0
@@ -249,6 +252,13 @@ def processConstructorCallAndDB(callEa):
     idc.MakeNameEx(op1, "g_"+db2Name+"DBMeta", idc.SN_NOWARN)
 
     tdbc.make_db2meta (op1)
+
+    prototype_details = idc.parse_decl("WowClientDB2_Base dbInstance", idc.PT_SILENT)
+    if prototype_details:
+        idc.apply_type(op0, prototype_details)
+
+    # idc.apply_type(op0, 'WowClientDB2_Base', TINFO_DEFINITE)
+    #set_type(op0, 'WowClientDB2_Base')
 
     findAndRenameInstanceGetter(op0, db2Name)
     print ""
