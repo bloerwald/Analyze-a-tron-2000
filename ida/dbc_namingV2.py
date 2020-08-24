@@ -136,28 +136,42 @@ def findWoWClient2Constructor():
     return constructorItself
 
 def findAndRenameFieldGetters(instanceGetter, dbName):
+    processedFunctions = set({})
+
+    foundGetterCnt = 0;
     for xref in XrefsTo(instanceGetter, ida_xref.XREF_ALL):
         if (XrefTypeName(xref.type) == "Code_Near_Call"):
 
             funcStart = GetFunctionAttr(xref.frm, FUNCATTR_START)
+            if (funcStart in processedFunctions):
+                continue
 
-            testdec = idaapi.decompile(funcStart)
-            opDict = testdec.body.details
+            processedFunctions.add(funcStart)
 
-            visitor = varNameFinder_visitor_t()
-            visitor.apply_to(testdec.body, None)
+            try:
+                testdec = idaapi.decompile(funcStart)
+                opDict = testdec.body.details
 
-            fieldNum = visitor.fieldNum
-
-            #If fieldNum has not been found yet, but varname was found
-            if ((fieldNum < 0) and (visitor.varName != None)):
-                visitor.mode = 1
+                visitor = varNameFinder_visitor_t()
                 visitor.apply_to(testdec.body, None)
+
                 fieldNum = visitor.fieldNum
 
-            # If field number was found - rename the getter
-            if (fieldNum != -1):
-                idc.MakeNameEx(funcStart, dbName+"DBInstance::GetField"+str(visitor.fieldNum), idc.SN_NOWARN)
+                #If fieldNum has not been found yet, but varname was found
+                if ((fieldNum < 0) and (visitor.varName != None)):
+                    visitor.mode = 1
+                    visitor.apply_to(testdec.body, None)
+                    fieldNum = visitor.fieldNum
+
+                # If field number was found - rename the getter
+                if (fieldNum != -1):
+                    idc.MakeNameEx(funcStart, dbName+"DBInstance::GetField"+str(visitor.fieldNum), idc.SN_NOWARN)
+                    foundGetterCnt+=1
+
+            except DecompilationFailure:
+                print "Failed to process possible field getter at ", hex(funcStart)
+
+    print "Found ", foundGetterCnt, "field getters for ", dbName
 
 def findAndRenameInstanceGetter(ea, dbName):
     for xref in XrefsTo(ea, ida_xref.XREF_ALL):
@@ -237,6 +251,7 @@ def processConstructorCallAndDB(callEa):
     tdbc.make_db2meta (op1)
 
     findAndRenameInstanceGetter(op0, db2Name)
+    print ""
 
 wowClientConstr = findWoWClient2Constructor()
 
