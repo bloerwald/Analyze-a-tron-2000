@@ -6,9 +6,11 @@ from idc import *
 import ida_hexrays
 import tdbc
 
+db2NameByInstanceName = dict(short='dict', long='dictionary')
+
 def set_type(ea, type_str):
     _type = parse_decl(type_str, 0)
-    apply_type(ea, _type, TINFO_DEFINITE)
+    idc.apply_type(ea, _type, TINFO_DEFINITE)
 
 def get_string(addr):
     out = ""
@@ -55,24 +57,27 @@ class varNameFinder_visitor_t(ida_hexrays.ctree_parentee_t):
         #print expr
         if (self.mode == 0):
             op = expr.op
-            if (op == ida_hexrays.cot_memref):
-                exprStr = expr.print1(None)
-                exprStr = ida_lines.tag_remove(exprStr)
-                exprStr = ida_pro.str2user(exprStr)
-                if ("].storage_type" in exprStr):
-                    #Extract variable name from [varname].storage_type expression
-                    m = re.search('\[(.+?)\]', exprStr)
-                    if m:
-                        found = m.group(1)
+            exprStr = expr.print1(None)
+            exprStr = ida_lines.tag_remove(exprStr)
+            exprStr = ida_pro.str2user(exprStr)
+            if (("].storage_type" in exprStr) or ("m_columnMeta.data[" in exprStr)):
+                #Extract variable name from [varname].storage_type expression
+                m = re.search('\[(.+?)\]', exprStr)
+                if m:
+                    found = m.group(1)
 
-                        #Test if it's a straight number
-                        self.fieldNum = self.tryDecimalAndHex(found);
-                        if (self.fieldNum > -1):
-                            # Value has been found quitting
-                            return 1
-
-                        self.varName = found
+                    #Test if it's a straight number
+                    self.fieldNum = self.tryDecimalAndHex(found);
+                    if (self.fieldNum > -1):
+                        # Value has been found quitting
+                        #print "fieldNum = ", self.fieldNum
                         return 1
+                    # print "varName = ", found
+                    self.varName = found
+                    return 1
+                else:
+                    pass
+                    # print "Could not extract anything in ", exprStr
 
         if (self.mode == 1):
             if (expr.op == 2) :
@@ -87,10 +92,13 @@ class varNameFinder_visitor_t(ida_hexrays.ctree_parentee_t):
                         #print "oops"
                         pass
 
+        self.prune_now()
         return 0
 
     def visit_insn(self, i):
-        return self.process(i)
+        #print "i", i
+        #return self.process(i)
+        return 0
 
     def visit_expr(self, expr):
         return self.process(expr)
@@ -138,41 +146,43 @@ def findWoWClient2Constructor():
     constructorItself = get_operand_value(constructorCall, 0)
     return constructorItself
 
-def findAndRenameFieldGetters(instanceGetter, dbName):
+def processXRefForFieldGetter(possibleGetterAddr, dbName, suffix = ''):
+    try:
+        testdec = idaapi.decompile(possibleGetterAddr)
+        opDict = testdec.body.details
+
+        visitor = varNameFinder_visitor_t()
+        visitor.apply_to(testdec.body, None)
+
+        fieldNum = visitor.fieldNum
+
+        #If fieldNum has not been found yet, but varname was found
+        if ((fieldNum < 0) and (visitor.varName != None)):
+            visitor.mode = 1
+            visitor.apply_to(testdec.body, None)
+            fieldNum = visitor.fieldNum
+
+        # If field number was found - rename the getter
+        if (fieldNum != -1):
+            idc.MakeNameEx(possibleGetterAddr, dbName+"DBInstance::GetField"+str(visitor.fieldNum)+suffix, idc.SN_NOWARN)
+            return 1
+    except DecompilationFailure, AttributeError:
+        print "Failed to process possible field getter at ", hex(possibleGetterAddr)
+
+    return 0
+
+def findAndRenameFieldGetters(instanceGetter, instancePtr, dbName):
     processedFunctions = set({})
 
-    foundGetterCnt = 0;
+    foundGetterCnt = 0
     for xref in XrefsTo(instanceGetter, ida_xref.XREF_ALL):
         if (XrefTypeName(xref.type) == "Code_Near_Call"):
-
             funcStart = GetFunctionAttr(xref.frm, FUNCATTR_START)
             if (funcStart in processedFunctions):
                 continue
 
             processedFunctions.add(funcStart)
-
-            try:
-                testdec = idaapi.decompile(funcStart)
-                opDict = testdec.body.details
-
-                visitor = varNameFinder_visitor_t()
-                visitor.apply_to(testdec.body, None)
-
-                fieldNum = visitor.fieldNum
-
-                #If fieldNum has not been found yet, but varname was found
-                if ((fieldNum < 0) and (visitor.varName != None)):
-                    visitor.mode = 1
-                    visitor.apply_to(testdec.body, None)
-                    fieldNum = visitor.fieldNum
-
-                # If field number was found - rename the getter
-                if (fieldNum != -1):
-                    idc.MakeNameEx(funcStart, dbName+"DBInstance::GetField"+str(visitor.fieldNum), idc.SN_NOWARN)
-                    foundGetterCnt+=1
-
-            except DecompilationFailure:
-                print "Failed to process possible field getter at ", hex(funcStart)
+            foundGetterCnt += processXRefForFieldGetter(funcStart, dbName)
 
     print "Found ", foundGetterCnt, "field getters for ", dbName
 
@@ -191,7 +201,7 @@ def findAndRenameInstanceGetter(ea, dbName):
                     idc.apply_type(funcStart, prototype_details)
                     idc.set_name(funcStart, prototype_details[0])
                 idc.MakeNameEx(funcStart, "get"+dbName+"DBInstance", idc.SN_NOWARN)
-                findAndRenameFieldGetters(funcStart, dbName)
+                findAndRenameFieldGetters(funcStart, ea, dbName)
 
                 return funcStart
     print "Getter not found for ", dbName
@@ -247,10 +257,13 @@ def processConstructorCallAndDB(callEa):
     db2Name = get_string(Qword(op1))
     print "db2Name = ", db2Name
 
+    instanceName = "g_"+db2Name+"DBInstance";
+
     idc.MakeNameEx(db2CreatorFunc, "create"+db2Name+"DBInstance", idc.SN_NOWARN)
-    idc.MakeNameEx(op0, "g_"+db2Name+"DBInstance", idc.SN_NOWARN)
+    idc.MakeNameEx(op0, instanceName, idc.SN_NOWARN)
     idc.MakeNameEx(op1, "g_"+db2Name+"DBMeta", idc.SN_NOWARN)
 
+    db2NameByInstanceName[instanceName] = db2Name;
     tdbc.make_db2meta (op1)
 
     prototype_details = idc.parse_decl("WowClientDB2_Base dbInstance", idc.PT_SILENT)
@@ -268,3 +281,27 @@ wowClientConstr = findWoWClient2Constructor()
 for xref in XrefsTo(wowClientConstr, ida_xref.XREF_ALL):
     if (XrefTypeName(xref.type) == "Code_Near_Call"):
         processConstructorCallAndDB(xref.frm)
+
+#Process all global references to
+processedFunctions = set({})
+for xref in get_member_xrefs('WowClientDB2_Base', 'm_columnMeta'):
+    if (XrefTypeName(xref.type) == "Data_Offset"):
+        funcStart = GetFunctionAttr(xref.frm, FUNCATTR_START)
+        if (funcStart in processedFunctions):
+            continue
+
+        processedFunctions.add(funcStart)
+
+        ea = xref.frm
+        if idc.get_operand_type(ea, 1) in (idc.o_imm, idc.o_mem):
+            globalAddressOfMember = idc.get_operand_value(ea, 1)
+        else:
+            globalAddressOfMember = int(idc.print_operand(ea, 1), 16)
+
+        dbName = get_name_expr(xref.frm, 0, globalAddressOfMember, BADADDR )
+        dbName = ida_lines.tag_remove(dbName)
+        dbName = ida_pro.str2user(dbName)
+        dbName = db2NameByInstanceName[dbName.split('.')[0]]
+        foundGetterCnt = processXRefForFieldGetter(funcStart, dbName, '_direct')
+        if (foundGetterCnt > 0):
+            print 'Found new getter for ', dbName, ' at ', hex(funcStart)
