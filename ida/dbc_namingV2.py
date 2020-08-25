@@ -282,7 +282,25 @@ for xref in XrefsTo(wowClientConstr, ida_xref.XREF_ALL):
     if (XrefTypeName(xref.type) == "Code_Near_Call"):
         processConstructorCallAndDB(xref.frm)
 
-#Process all global references to
+#Process all global references to WowClientDB2_Base.m_columnMeta
+def get_member_ids(sid):
+    offset = 0
+    while offset != 0xFFFFFFFF:
+        mid = idc.GetMemberId(sid, offset)
+        if mid != -1:
+            yield mid, offset
+        offset = idc.GetStrucNextOff(sid, offset)
+
+
+def get_member_xrefs(struc_name, memberName):
+    sid = idc.GetStrucIdByName(struc_name)
+    for mid, offset in get_member_ids(sid):
+        if (GetMemberName(sid, offset) == memberName):
+            for xref in XrefsTo(mid):
+                yield xref
+
+            return
+
 processedFunctions = set({})
 for xref in get_member_xrefs('WowClientDB2_Base', 'm_columnMeta'):
     if (XrefTypeName(xref.type) == "Data_Offset"):
