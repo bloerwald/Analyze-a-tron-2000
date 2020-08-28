@@ -67,8 +67,8 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
   butil.force_variable (dbobject, tdbc.WowClientDB2_Base, 'db_{}'.format(name))
   dbobjects[dbobject] = name
 
-  for db2ObjectRef in CodeRefsTo(dbobject, 0):
-    match = cutil.matches_any(db2ObjectRef,
+  for db2ObjectRef in XrefsTo(dbobject, 0):
+    match = cutil.matches_any(db2ObjectRef.frm,
                               ( [ (+0x00, ['lea',  'rax', 'db_.*'  ]),
                                   (+0x07, ['retn'                  ]),
                                 ],
