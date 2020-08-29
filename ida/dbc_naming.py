@@ -94,7 +94,6 @@ for codeRef in CodeRefsTo(clientdb_base_dtor_loc, 0):
                            )
 
   if match is None:
-    print ('static dtors: skipping {}: unknown pattern'.format (butil.eastr (codeRef)))
     continue
   # todo: check that we're not naming a bigger static dtor, e.g. by function size
   name = match[0]
