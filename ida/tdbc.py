@@ -63,7 +63,65 @@ DB2TableEvent = tutil.maybe_make_dummy_type ('DB2TableEvent')
 WowClientDB2_Base__IndexDataMap = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_IndexDataMap', 40)
 WowClientDB2_Base__UniqueIdxByInt = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_UniqueIdxByInt', 40)
 WowClientDB2_Base__UniqueIdxByString = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_UniqueIdxByString', 40)
-WowClientDB2_Base__AsyncSection = tutil.maybe_make_dummy_type_with_known_size ('WowClientDB2_Base_AsyncSection', 40)
+WowClientDB2_Base__AsyncSection = tutil.add_unpacked_type ('WowClientDB2_Base_AsyncSection',
+                                                           """
+                                                           void* m_WowClientDB2Instance; // == WowClientDB2_Base*?
+                                                           void* asyncLoadClass;
+                                                           __int64 field_10;
+                                                           char m_loaded;
+                                                           uint32_t field_1c;
+                                                           void* sectionBufferPtr;
+                                                           """)
+
+wdc3_db2_header = tutil.add_packed_type('wdc3_db2_header',
+                                        """
+                                        uint32_t magic;
+                                        uint32_t record_count;
+                                        uint32_t field_count;
+                                        uint32_t record_size;
+                                        uint32_t string_table_size;
+                                        uint32_t table_hash;
+                                        uint32_t layout_hash;
+                                        uint32_t min_id;
+                                        uint32_t max_id;
+                                        uint32_t locale;
+                                        uint16_t flags;
+                                        uint16_t id_index;
+                                        uint32_t total_field_count;
+                                        uint32_t bitpacked_data_offset;
+                                        uint32_t lookup_column_count;
+                                        uint32_t field_storage_info_size;
+                                        uint32_t common_data_size;
+                                        uint32_t pallet_data_size;
+                                        uint32_t section_count;
+                                        """)
+field_storage_info = tutil.add_packed_type('field_storage_info',
+                                           """
+                                           uint16_t field_offset_bits;
+                                           uint16_t field_size_bits;
+                                           uint32_t additional_data_size;
+                                           uint32_t storage_type;
+                                           uint32_t bitpacking_offset_bits;
+                                           uint32_t bitpacking_size_bits;
+                                           uint32_t flags;
+                                           """)
+wdc3_section_header = tutil.add_packed_type('wdc3_section_header',
+                                            """
+                                            __int64 tact_key_hash;
+                                            uint32_t file_offset;
+                                            uint32_t record_count;
+                                            uint32_t string_table_size;
+                                            uint32_t offset_records_end;
+                                            uint32_t id_list_size;
+                                            uint32_t relationship_data_size;
+                                            uint32_t offset_map_id_count;
+                                            uint32_t copy_table_count;
+                                            """)
+field_structure = tutil.add_unpacked_type('field_structure',
+                                          """
+                                          uint16_t size;
+                                          uint16_t offset;
+                                          """)
 
 DBMeta_intidx = tutil.add_unpacked_type('DBMeta_intidx',
                                         """
@@ -158,40 +216,41 @@ WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               virtual void* vf38();
                                               virtual void* vf39();
 
-                                              const %s* m_meta;
-                                              %s m_columnMeta;
-                                              %s field_28;
-                                              %s field_40;
-                                              %s field_58;
-                                              __int64 field_70;
+                                              const {meta}* m_meta;
+                                              {columnmeta} m_columnMeta;
+                                              {vecunknown} palleteData;
+                                              {vecunknown} palleteDataForIndexedArrays;
+                                              {vecunknown} commonData;
+                                              int field_70;
+                                              int field_74;
                                               _QWORD field_78;
                                               __int64 field_80;
                                               __int64 m_pendingPatches_size;
                                               float field_90;
                                               int field_94;
-                                              %s* m_parentLookup;
-                                              %s recordCallbacks;
-                                              %s tableEvents;
+                                              {lookuper}* m_parentLookup;
+                                              {reccallbacks} recordCallbacks;
+                                              {tableevents} tableEvents;
                                               _QWORD field_D0;
                                               _QWORD field_D8;
                                               _QWORD field_E0;
                                               float field_E8;
                                               int field_EC;
-                                              %s bucket_infos;
-                                              %s field_108;
-                                              void* m_fileHeader;
-                                              void* field_128;
+                                              {indexdatas} bucket_infos;
+                                              {vecunknown} field_108;
+                                              {filehdr}* m_fileHeader;
+                                              {filesecthdr}* m_sectionHeaders;
                                               void* m_rawData;
                                               void* m_rawDataCopy;
-                                              %s* lookuper;
-                                              %s uniqueidxbyint;
-                                              %s uniqueidxbystring;
-                                              void* field_178;
-                                              %s m_sectionInfo;
+                                              {lookuper}* lookuper;
+                                              {idxbyints} uniqueidxbyint;
+                                              {idxbystrs} uniqueidxbystring;
+                                              {fields}* m_fields;
+                                              {asyncsects} asyncSections;
                                               int field_198;
                                               int m_numFileRecords;
                                               int some_row_count1;
-                                              int some_row_count2;
+                                              int m_loadedRowsCnt;
                                               _DWORD maxID;
                                               _DWORD minID;
                                               __int64 field_1B0;
@@ -204,20 +263,19 @@ WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               char m_uniqueIndicesValid;
                                               _BYTE field_1D0;
                                               char unknown_size;
-                                              """ % ( DBMeta,
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), ['_UNKNOWN']),
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), ['_UNKNOWN']),
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), ['_UNKNOWN']),
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), ['_UNKNOWN']),
-                                                      cdb_lookuper,
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), [DB2RecordCallback]),
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), [DB2TableEvent]),
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__IndexDataMap]),
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), ['_UNKNOWN']),
-                                                      cdb_lookuper,
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__UniqueIdxByInt]),
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__UniqueIdxByString]),
-                                                      tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__AsyncSection])))
+                                              """.format(meta=DBMeta,
+                                                         filehdr=wdc3_db2_header,
+                                                         filesecthdr=wdc3_section_header,
+                                                         fields=field_structure,
+                                                         columnmeta=tutil.create_template_and_make_name (tcontainers.blz_vector(), [field_storage_info]),
+                                                         vecunknown=tutil.create_template_and_make_name (tcontainers.blz_vector(), ['_UNKNOWN']),
+                                                         lookuper=cdb_lookuper,
+                                                         reccallbacks=tutil.create_template_and_make_name (tcontainers.blz_vector(), [DB2RecordCallback]),
+                                                         tableevents=tutil.create_template_and_make_name (tcontainers.blz_vector(), [DB2TableEvent]),
+                                                         indexdatas=tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__IndexDataMap]),
+                                                         idxbyints=tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__UniqueIdxByInt]),
+                                                         idxbystrs=tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__UniqueIdxByString]),
+                                                         asyncsects=tutil.create_template_and_make_name (tcontainers.blz_vector(), [WowClientDB2_Base__AsyncSection])))
 
 def make_db2meta(ea):
   ti = ida_typeinf.tinfo_t()
