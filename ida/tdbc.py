@@ -101,7 +101,7 @@ DBMeta = tutil.add_unpacked_type ('DBMeta',
                                    unsigned int* fieldTypes;
                                    unsigned int* fieldFlags;
                                    char flags_58;
-                                   int m_tableHash;
+                                   int tableHash;
                                    int sibling_tableHash;
                                    int layoutHash;
                                    char flags_68;
@@ -109,15 +109,55 @@ DBMeta = tutil.add_unpacked_type ('DBMeta',
                                    int nbUniqueIdxByString;
                                    {intidxt}* uniqueIdxByInt;
                                    {stridxt}* uniqueIdxByString;
-                                   char flags_88;
-                                   int hotFixFieldRelation;
-                                   int fieldRelation;
+                                   char hasParentId;
+                                   int parentIdFieldIndex;
+                                   int parentIdFieldIndex_file;
                                    void* sortFunc;
                                    void* sortFuncIndirect;""".format(stridxt=DBMeta_stridx,intidxt=DBMeta_intidx))
 
 WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               """
-                                              virtual void* vf0();
+                                              virtual void* dtor();
+                                              virtual void* vf01();
+                                              virtual void* vf02();
+                                              virtual void* vf03();
+                                              virtual void* vf04();
+                                              virtual void* vf05();
+                                              virtual void* vf06();
+                                              virtual void* vf07();
+                                              virtual void* vf08();
+                                              virtual void* vf09();
+                                              virtual void* vf10();
+                                              virtual void* vf11();
+                                              virtual void* vf12();
+                                              virtual void* vf13();
+                                              virtual void* vf14();
+                                              virtual void* vf15();
+                                              virtual void* vf16();
+                                              virtual void* vf17();
+                                              virtual void* vf18();
+                                              virtual void* vf19();
+                                              virtual void* vf20();
+                                              virtual void* vf21();
+                                              virtual void* vf22();
+                                              virtual void* vf23();
+                                              virtual void* vf24();
+                                              virtual void* vf25();
+                                              virtual void* vf26();
+                                              virtual void* vf27();
+                                              virtual void* vf28();
+                                              virtual void* vf29();
+                                              virtual void* vf30();
+                                              virtual void* vf31();
+                                              virtual void* vf32();
+                                              virtual void* vf33();
+                                              virtual void* vf34();
+                                              virtual void* vf35();
+                                              virtual void* vf36();
+                                              virtual void* vf37();
+                                              virtual void* vf38();
+                                              virtual void* vf39();
+
                                               const %s* m_meta;
                                               %s m_columnMeta;
                                               %s field_28;
@@ -147,7 +187,7 @@ WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               %s uniqueidxbyint;
                                               %s uniqueidxbystring;
                                               void* field_178;
-                                              %s asyncSections;
+                                              %s m_sectionInfo;
                                               int field_198;
                                               int m_numFileRecords;
                                               int some_row_count1;
