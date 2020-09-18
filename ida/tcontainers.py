@@ -61,3 +61,24 @@ class blz_unordered_set (tutil.template_description):
                                          unsigned __int64 total_elements;
                                          float elem_per_bucket_threshold;'''.format (node=node),
                                          unique)
+
+class blz_unordered_map (tutil.template_description):
+  def __init__ (self):
+    tutil.template_description.__init__ (self, "blz::unordered_map", ["Key", "Value"])
+  def create_types (self, parameter_names, unique = True):
+    value = tutil.create_template_and_make_name(blz_pair(), parameter_names)
+    node = tutil.create_template_and_make_name(blz_chained_hash_node(), [value])
+    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names, 'blz::unordered_map::iterator'),
+                                         '''
+                                         {node}* element;
+                                         {node}** bucket_with_element;
+                                         {node}** last_bucket;'''.format (node=node),
+                                         False)
+    insert_result = tutil.create_template_and_make_name(blz_pair(), [iterator, 'bool'], False)
+    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names),
+                                         '''
+                                         unsigned __int64 num_buckets;
+                                         {node}** m_buckets;
+                                         unsigned __int64 total_elements;
+                                         float elem_per_bucket_threshold;'''.format (node=node),
+                                         unique)
