@@ -48,6 +48,9 @@ def find_pattern(pattern, search_range = None):
 
   return first_result
 
+def find_string(string, search_range = None):
+  return find_pattern (' '.join([hex(ord(c))[2:] for c in string]), search_range)
+
 def find_pattern_all(pattern, search_range = None):
   begin, end = _unpack_range(search_range)
 

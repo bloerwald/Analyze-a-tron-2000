@@ -2,6 +2,16 @@
 
 import os
 import sys
+
+is_in_ida = False
+try:
+  import idc
+  is_in_ida = True
+  likely_wowdefs_path = os.path.dirname(os.path.realpath(__file__)) + '/WoWDBDefs'
+  sys.path += [likely_wowdefs_path + '/code/Python']
+except Exception:
+  pass
+
 import dbd
 
 def has_build(needle, builds):
@@ -22,7 +32,15 @@ def has_build(needle, builds):
 
 def main():
   args = None
-  if True:
+  if is_in_ida:
+    import butil
+    class FakeArgs:
+      def __init__(self):
+        self.definitions = likely_wowdefs_path + '/definitions'
+        user_agent_prefix = 'Mozilla/5.0 (Windows; U; %s) WorldOfWarcraft/'
+        self.build = idc.GetString (butil.find_string (user_agent_prefix) + len(user_agent_prefix), -1)
+    args = FakeArgs()
+  else:
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument( '--definitions', dest="definitions", type=str, required=True
@@ -36,9 +54,11 @@ def main():
   dbds = dbd.parse_dbd_directory(args.definitions)
 
   file_data = {}
+  inline_column_names = {}
 
   for name, parsed in dbds.items():
     file_data[name] = ""
+    inline_column_names[name] = []
 
     columns = {}
     for column in parsed.columns:
@@ -80,6 +100,9 @@ def main():
           else:
             comments += ["{}".format(annotation)]
 
+        if not 'noninline' in entry.annotation:
+          inline_column_names[name] += [entry.column]
+
         comments += [entry.comment] if entry.comment else []
         comments += [meta.comment] if meta.comment else []
         comments_str = ''
@@ -93,14 +116,24 @@ def main():
       else:
         for comment in definition.comments:
           file_data[name] += '// ' + str(comment.encode('ascii', 'backslashreplace')) + "\n\n"
-        if True:
+        if not is_in_ida:
           file_data[name] += "struct {}Rec {{\n".format(name)
         for line in lines:
           file_data[name] += line + "\n"
-        if True:
+        if not is_in_ida:
           file_data[name] += "};\n"
 
-  if True:
+  if is_in_ida:
+    import tutil
+    tutil.add_unpacked_type ('dbc_string', 'uint32_t _;')
+    tutil.add_unpacked_type ('dbc_locstring', 'uint32_t _;')
+    for name, data in file_data.items():
+      tutil.add_packed_type (name + 'Rec', data, tutil.ADD_TYPE.REPLACE)
+      for col in range(0, len(inline_column_names[name])):
+        ea = idc.get_name_ea_simple ('{}::column_{}'.format(name, col))
+        if ea != BADADDR:
+          idc.MakeName(ea, '{}::{}'.format(name, inline_column_names[name][col]))
+  else:
     print ('struct dbc_string { uint32_t _; };')
     print ('typedef dbc_string dbc_locstring;')
 
