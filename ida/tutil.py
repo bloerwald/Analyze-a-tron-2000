@@ -1,43 +1,58 @@
 from idaapi import *
 import ida_struct
+import putil
 
-def add_packed_type (name, decl, unique = False):
-  if ida_struct.get_struc_id (name) != BADADDR:
-    if unique:
+ADD_TYPE = putil.enum(KEEP = False, ENSURE_UNIQUE = True)
+
+def exists(name):
+  return ida_struct.get_struc_id (name) != BADADDR
+
+def _add_type (name, decl, attr, pre, post, mode):
+  if exists(name):
+    if mode == ADD_TYPE.ENSURE_UNIQUE:
       raise RuntimeError ("struct %s already exists" % (name))
-  else:
-    idc_parse_types ("""
-      #pragma pack (push, 1)
-      struct %s { %s };
-      #pragma pack (pop, 1)""" % (name, decl), 0)
-    import_type (cvar.idati, -1, name)
-    print "## DECLARED ", name
+    elif mode == ADD_TYPE.KEEP:
+      print "## kept existing", name
+      return name
+  if decl != '':
+    decl = '{' + decl + '}'
+  idc_parse_types ("{pre}\nstruct {attr} {name} {decl};\n{post}"
+                   .format(pre=pre, name=name, attr=attr, decl=decl, post=post), 0)
+  import_type (cvar.idati, -1, name)
+  print "## declared", name
   return name
 
-def add_unpacked_type (name, decl, unique = False, alignment = None):
-  if ida_struct.get_struc_id (name) != BADADDR:
-    if unique:
-      raise RuntimeError ("struct %s already exists" % (name))
-  else:
-    align_str = ''
-    if not alignment is None:
-      align_str = '__declspec(align({})) '.format(alignment)
-    idc_parse_types ("""struct %s %s { %s };""" % (align_str, name, decl), 0)
-    import_type (cvar.idati, -1, name)
-    print "## DECLARED ", name
-  return name
+def add_packed_type (name, decl, mode = ADD_TYPE.KEEP):
+  return _add_type (name,
+                    decl,
+                    '',
+                    '#pragma pack (push, 1)',
+                    '#pragma pack (pop, 1)',
+                    mode)
+
+def add_unpacked_type (name, decl, mode = ADD_TYPE.KEEP, alignment = None):
+  return _add_type (name,
+                    decl,
+                    '' if not alignment else '__declspec(align({})) '.format(alignment),
+                    '',
+                    '',
+                    mode)
 
 def maybe_make_dummy_type (name):
-  if ida_struct.get_struc_id (name) == BADADDR:
-    idc_parse_types ("struct %s;" % (name), 0)
-    import_type (cvar.idati, -1, name)
-  return name
+  return _add_type (name,
+                    '',
+                    '',
+                    '',
+                    '',
+                    ADD_TYPE.KEEP)
 
 def maybe_make_dummy_type_with_known_size (name, size):
-  if ida_struct.get_struc_id (name) == BADADDR:
-    idc_parse_types ("struct %s { char dummy[%s]; };" % (name, size), 0)
-    import_type (cvar.idati, -1, name)
-  return name
+  return _add_type (name,
+                    'char dummy[{}];'.format(size),
+                    '',
+                    '',
+                    '',
+                    ADD_TYPE.KEEP)
 
 def create_template_and_make_name (template, parameters, unique = False):
   template.create_types (parameters, unique)
