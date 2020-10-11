@@ -2,7 +2,7 @@ from idaapi import *
 import ida_struct
 import putil
 
-ADD_TYPE = putil.enum(KEEP = False, ENSURE_UNIQUE = True)
+ADD_TYPE = putil.enum(KEEP = False, ENSURE_UNIQUE = True, REPLACE = 2)
 
 def exists(name):
   return ida_struct.get_struc_id (name) != BADADDR
@@ -11,6 +11,9 @@ def _add_type (name, decl, attr, pre, post, mode):
   if exists(name):
     if mode == ADD_TYPE.ENSURE_UNIQUE:
       raise RuntimeError ("struct %s already exists" % (name))
+    elif mode == ADD_TYPE.REPLACE:
+      print "## removed existing", name
+      ida_typeinf.del_named_type (cvar.idati, name, ida_typeinf.NTF_TYPE)
     elif mode == ADD_TYPE.KEEP:
       print "## kept existing", name
       return name
