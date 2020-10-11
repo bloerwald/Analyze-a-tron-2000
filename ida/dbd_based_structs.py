@@ -125,8 +125,7 @@ def main():
 
   if is_in_ida:
     import tutil
-    tutil.add_unpacked_type ('dbc_string', 'uint32_t _;')
-    tutil.add_unpacked_type ('dbc_locstring', 'uint32_t _;')
+    import tdbc
     for name, data in file_data.items():
       tutil.add_packed_type (name + 'Rec', data, tutil.ADD_TYPE.REPLACE)
       for col in range(0, len(inline_column_names[name])):

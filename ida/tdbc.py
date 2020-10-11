@@ -123,6 +123,9 @@ field_structure = tutil.add_unpacked_type('field_structure',
                                           uint16_t offset;
                                           """)
 
+dbc_string = tutil.add_unpacked_type ('dbc_string', 'uint32_t _;')
+dbc_locstring = tutil.add_unpacked_type ('dbc_locstring', 'uint32_t _;')
+
 DBMeta_intidx = tutil.add_unpacked_type('DBMeta_intidx',
                                         """
                                         int column;

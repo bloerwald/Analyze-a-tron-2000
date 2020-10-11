@@ -1,6 +1,7 @@
 import butil
 import cutil
 import tdbc
+import tutil
 
 # clientdb_base ctor: search any database name, xref to dbmeta, xref
 # to the function using that, is mostly just one, the static ctor for
@@ -99,6 +100,87 @@ for codeRef in CodeRefsTo(clientdb_base_dtor_loc, 0):
   name = match[0]
 
   MakeName (cutil.function_containing(codeRef), 'staticdtor_db_{}'.format(name))
+
+def has_build(needle, builds):
+  for build in builds:
+    if isinstance(build, tuple):
+      begin, end = build
+      if begin.major != end.major or begin.minor != end.minor or begin.patch != end.patch or begin.build > end.build:
+        continue # todo: implement
+      while begin != end:
+        if needle == str(begin):
+          return True
+        begin.build += 1
+    else:
+      if str(build) == needle:
+        return True
+
+  return False
+
+def init_column_names_and_make_rec_structs():
+  inline_column_names = {}
+
+  try:
+    likely_wowdefs_path = os.path.dirname(os.path.realpath(__file__)) + '/WoWDBDefs'
+    sys.path += [likely_wowdefs_path + '/code/Python']
+    import dbd
+  except Exception:
+    print ('WARNING: NOT getting column names: unable to find WoWDBDefs directory')
+    return inline_column_names
+
+  user_agent_prefix = 'Mozilla/5.0 (Windows; U; %s) WorldOfWarcraft/'
+  build = idc.GetString (butil.find_string (user_agent_prefix) + len(user_agent_prefix), -1)
+
+  dbds = dbd.parse_dbd_directory(likely_wowdefs_path + '/definitions')
+
+  for name, parsed in dbds.items():
+    inline_column_names[name] = []
+
+    columns = {}
+    for column in parsed.columns:
+      columns[column.name] = column
+    assert(len(columns)==len(parsed.columns))
+
+    for definition in parsed.definitions:
+      if not has_build (build, definition.builds):
+        continue
+
+      lines = []
+      has_string = False
+      for entry in definition.entries:
+        if 'noninline' in entry.annotation:
+          continue
+
+        meta = columns[entry.column]
+
+        type_str = meta.type
+        if type_str in ['uint', 'int']:
+          type_str = '{}{}_t'.format (meta.type if not entry.is_unsigned else 'uint', entry.int_width if entry.int_width else 32)
+        elif type_str in ['string', 'locstring']:
+          type_str = 'dbc_' + type_str
+          has_string = True
+        else:
+          assert (not entry.int_width)
+          assert (not meta.foreign)
+
+        inline_column_names[name] += [entry.column]
+        array_str = '[{}]'.format(entry.array_size) if entry.array_size else ''
+        lines += ['{} {}{};'.format(type_str, entry.column, array_str)]
+
+      if 'table is sparse' in definition.comments and has_string:
+        print('WARNING: omitting rec struct for {}: table is sparse and has string, the layout would be wrong!'.format(name))
+      else:
+        tutil.add_packed_type (name + 'Rec', ''.join(lines), tutil.ADD_TYPE.REPLACE)
+
+  return inline_column_names
+
+inline_column_names = init_column_names_and_make_rec_structs()
+
+def make_column_getter_name(db, idx):
+  if db in inline_column_names:
+    return '{}::col_{}_{}'.format (db, idx, inline_column_names[db][idx])
+  else:
+    return '{}::col_{}'.format (db, idx)
 
 column_getters = {}
 
@@ -367,8 +449,7 @@ for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
     print ('column getters: skipping {}: unknown pattern'.format (butil.eastr (codeRef)))
     continue
 
-  # todo: dbd the actual column name
-  new_name = '{}::column_{}'.format (match[1], match[0])
+  new_name = make_column_getter_name(match[1], match[0])
 
   if not new_name in column_getters:
     column_getters[new_name] = []
@@ -447,8 +528,7 @@ for dbobject, name in dbobjects.items():
     if match is None:
       continue
 
-    # todo: dbd the actual column name
-    new_name = '{}::column_{}'.format (name, match[0])
+    new_name = make_column_getter_name (name, match[0])
 
     if not new_name in column_getters:
       column_getters[new_name] = []
