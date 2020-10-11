@@ -82,7 +82,7 @@ def main():
         comments += [meta.comment] if meta.comment else []
         comments_str = ''
         if len (comments):
-          comments_str = '// {}'.format (';'.join (comments));
+          comments_str = '// {}'.format (';'.join (comments).encode('ascii', 'backslashreplace'))
 
         lines += [merged_str_pattern.format(type_str, name_str, array_str, comments_str)]
 
@@ -90,7 +90,7 @@ def main():
         file_data[name] += '// omitting: is sparse and has string, the layout would be wrong!'
       else:
         for comment in definition.comments:
-          file_data[name] += '// ' + str(comment) + "\n\n"
+          file_data[name] += '// ' + str(comment.encode('ascii', 'backslashreplace')) + "\n\n"
         file_data[name] += "struct {}Rec {{\n".format(name)
         for line in lines:
           file_data[name] += line + "\n"
