@@ -1,9 +1,8 @@
 #! /usr/bin/env python
 
-import dbd
 import os
 import sys
-import argparse
+import dbd
 
 def has_build(needle, builds):
   for build in builds:
@@ -22,12 +21,15 @@ def has_build(needle, builds):
   return False
 
 def main():
-  parser = argparse.ArgumentParser()
-  parser.add_argument( '--definitions', dest="definitions", type=str, required=True
-                     , help="location of .dbd files")
-  parser.add_argument( '--build', dest="build", type=str, required=True
-                     , help="WoW build to select")
-  args = parser.parse_args()
+  args = None
+  if True:
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument( '--definitions', dest="definitions", type=str, required=True
+                       , help="location of .dbd files")
+    parser.add_argument( '--build', dest="build", type=str, required=True
+                       , help="WoW build to select")
+    args = parser.parse_args()
 
   #dbds = {}
   #dbds['AreaPOI'] = dbd.parse_dbd_file(os.path.join(args.definitions, "AreaPOI{}".format(dbd.file_suffix)))
@@ -91,19 +93,22 @@ def main():
       else:
         for comment in definition.comments:
           file_data[name] += '// ' + str(comment.encode('ascii', 'backslashreplace')) + "\n\n"
-        file_data[name] += "struct {}Rec {{\n".format(name)
+        if True:
+          file_data[name] += "struct {}Rec {{\n".format(name)
         for line in lines:
           file_data[name] += line + "\n"
-        file_data[name] += "};\n"
+        if True:
+          file_data[name] += "};\n"
 
-  print ('struct dbc_string { uint32_t _; };')
-  print ('typedef dbc_string dbc_locstring;')
+  if True:
+    print ('struct dbc_string { uint32_t _; };')
+    print ('typedef dbc_string dbc_locstring;')
 
-  for name, data in file_data.items():
-    print ('//' + name)
+    for name, data in file_data.items():
+      print ('//' + name)
 
-    print ('#pragma pack (push, 1)')
-    print (data)
-    print ('#pragma pack (pop, 1)')
+      print ('#pragma pack (push, 1)')
+      print (data)
+      print ('#pragma pack (pop, 1)')
 
 main()
