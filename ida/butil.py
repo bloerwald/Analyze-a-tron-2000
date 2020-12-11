@@ -1,10 +1,14 @@
 import ida_bytes
+import ida_funcs
 import ida_ida
+import ida_nalt
 import ida_name
 import ida_search
 import ida_segment
 import ida_typeinf
 import idc
+import struct
+import sys
 
 def _find_sane (begin, end, pattern):
   flags = ida_search.SEARCH_DOWN | ida_search.SEARCH_NEXT | ida_search.SEARCH_CASE
@@ -15,55 +19,61 @@ def find_segm_fixed (name):
   # ida_segments'getting segment by name returns a random one
   # segment_t.name is a bogus value
   # ... wtf? that "API" is a mess.
+  res = []
   it = ida_segment.get_first_seg()
-  while ida_segment.get_segm_name(it) != name and it:
+  while it:
+    if ida_segment.get_segm_name(it) == name:
+      res += [it]
     it = ida_segment.get_next_seg (it.start_ea + 1)
-  return it
+  return res
 
 class SearchRange:
-  absolutely_everything = None
+  absolutely_everything = [(ida_ida.cvar.inf.min_ea, ida_ida.cvar.inf.max_ea)]
   @classmethod
   def segment(cls, name):
     seg = find_segm_fixed(name)
-    if not seg:
+    if len(seg) == 0:
       raise Exception('unknown segment {}'.format(name))
-    return seg.start_ea, seg.end_ea
+    return [(s.start_ea, s.end_ea) for s in seg]
 
-def _unpack_range(search_range):
-  begin, end = ida_ida.cvar.inf.min_ea, ida_ida.cvar.inf.max_ea
-  if search_range is not None:
-    begin, end = search_range
-  return begin, end
+def find_pattern(pattern, search_range = SearchRange.absolutely_everything):
+  remaining_search_range = []
 
-def find_pattern(pattern, search_range = None):
-  begin, end = _unpack_range(search_range)
+  first_result = None
+  for begin, end in search_range:
+    if not first_result:
+      print(hex(begin), hex(end), 'search', pattern)
+      first_result = _find_sane (begin, end, pattern)
+      if first_result:
+        remaining_search_range += [(first_result + 1, end)]
+    else:
+      remaining_search_range += [(begin, end)]
 
-  first_result = _find_sane (begin, end, pattern)
   if not first_result:
     raise Exception ('unable to find pattern {}'.format (pattern))
 
-  second_result = _find_sane (first_result + 1, end, pattern)
-  if second_result:
-    raise Exception ('found more than one occurence of pattern {}, {} and {}'.format (pattern, hex (first_result), hex (second_result)))
+  for begin, end in remaining_search_range:
+    second_result = _find_sane (begin, end, pattern)
+    if second_result:
+      raise Exception ('found more than one occurence of pattern {}, {} and {}'.format (pattern, hex (first_result), hex (second_result)))
 
   return first_result
 
-def find_string(string, search_range = None):
+def find_string(string, search_range = SearchRange.absolutely_everything):
   return find_pattern (' '.join([hex(ord(c))[2:] for c in string]), search_range)
 
-def find_pattern_all(pattern, search_range = None):
-  begin, end = _unpack_range(search_range)
-
+def find_pattern_all(pattern, search_range = SearchRange.absolutely_everything):
   addrs = []
-  while True:
-    addr = _find_sane (begin, end, pattern)
-    if not addr:
-      break
-    addrs += [addr]
-    begin = addr + 1
+  for begin, end in search_range:
+    while True:
+      addr = _find_sane (begin, end, pattern)
+      if not addr:
+        break
+      addrs += [addr]
+      begin = addr + 1
   return addrs
 
-def find_string_all(string, search_range = None):
+def find_string_all(string, search_range = SearchRange.absolutely_everything):
   return find_pattern_all (' '.join([hex(ord(c))[2:] for c in string]), search_range)
 
 def mark_string(ea, name = None):
