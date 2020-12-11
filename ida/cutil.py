@@ -1,3 +1,5 @@
+import ida_lines
+import ida_ua
 import idc
 import re
 
@@ -13,19 +15,19 @@ import re
 def matches(ea, reqs, gets):
   results = []
   for offs, ins in reqs:
-    mnem = idc.GetMnem(ea + offs)
+    mnem = ida_lines.tag_remove(ida_ua.print_insn_mnem(ea + offs) or '')
     if ins[0] != mnem:
       return None
     i = 0
     for arg in ins[1:]:
-      opnd = idc.GetOpnd (ea + offs, i)
+      opnd = ida_lines.tag_remove(ida_ua.print_operand (ea + offs, i) or '')
       if opnd != arg and re.match('^' + arg + '$', opnd) is None:
         return None
       i += 1
   for get in gets:
     if type (get) == tuple:
       reqi, opi, fun = get
-      results += [fun(idc.GetOperandValue(ea + reqs[reqi][0], opi))]
+      results += [fun(idc.get_operand_value(ea + reqs[reqi][0], opi))]
     else:
       results += [get]
   return results
@@ -39,4 +41,4 @@ def matches_any(ea, *patterns):
   return None
 
 def function_containing(ea):
-  return idc.NextFunction(idc.PrevFunction(ea))
+  return idc.get_next_func(idc.get_prev_func(ea))

@@ -289,16 +289,16 @@ def make_db2meta(ea):
     m.name = name
     if ti.find_udt_member (m, ida_typeinf.STRMEM_NAME) == -1:
       raise Exception ('unknown DBMeta member {}'.format (name))
-    return idc.Dword(ea + m.offset / 8)
+    return butil.get_uint32(ea + m.offset // 8)
   def qword_mem(name):
     m = ida_typeinf.udt_member_t()
     m.name = name
     if ti.find_udt_member (m, ida_typeinf.STRMEM_NAME) == -1:
       raise Exception ('unknown DBMeta member {}'.format (name))
-    return idc.Qword(ea + m.offset / 8)
+    return butil.get_uint64(ea + m.offset // 8)
 
   nameaddr = qword_mem ('tableName')
-  name = idc.GetString (nameaddr)
+  name = butil.get_cstring (nameaddr).decode('utf-8')
 
   butil.mark_string (nameaddr, 'dbMeta_{}_tableName'.format(name))
 

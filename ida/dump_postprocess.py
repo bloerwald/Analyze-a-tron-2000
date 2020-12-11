@@ -19,11 +19,11 @@ class RUNTIME_FUNCTION:
   def __init__(self, ea):
     self.ea = ea
   def start(self):
-    return rva2ea(Dword (self.ea + self.off_start))
+    return rva2ea(butil.get_uint32 (self.ea + self.off_start))
   def end(self):
-    return rva2ea(Dword (self.ea + self.off_end))
+    return rva2ea(butil.get_uint32 (self.ea + self.off_end))
   def info(self):
-    return rva2ea(Dword (self.ea + self.off_info))
+    return rva2ea(butil.get_uint32 (self.ea + self.off_info))
   def next(self):
     return RUNTIME_FUNCTION(self.ea + self.size)
 
@@ -37,7 +37,7 @@ for ea in range(pdata.start_ea, pdata.end_ea - RUNTIME_FUNCTION.size, RUNTIME_FU
     continue
   if (end & ~0x0F) + 0x10 != start:
     continue
-  if Byte(end - 1) != 0xC3:
+  if butil.get_uint8(end - 1) != 0xC3:
     continue
 
   ida_bytes.del_items(end, ida_bytes.DELIT_NOUNAME | ida_bytes.DELIT_SIMPLE, start - end)

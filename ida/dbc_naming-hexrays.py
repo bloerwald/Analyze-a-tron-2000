@@ -1,6 +1,7 @@
 from idautils import *
 from idaapi import *
 from idc import *
+from idc_bc695 import *
 import ida_hexrays
 import tdbc
 
@@ -104,7 +105,7 @@ class varNameFinder_visitor_t(ida_hexrays.ctree_parentee_t):
 def findFirstFuncCall(ea):
     for (startea, endea) in Chunks(ea):
         for head in Heads(startea, endea):
-            if idaapi.isCode(idaapi.getFlags(head)) and idaapi.is_call_insn(head):
+            if idaapi.is_code(idaapi.get_full_flags(head)) and idaapi.is_call_insn(head):
                 #print "funcCall", ":", "0cot_numx%08x"%(head)
                 return head
 
@@ -116,17 +117,17 @@ def findWoWClient2Constructor():
     #    print searchText
 
     found = False
-    ea = MinEA()
-    maxEa = MaxEA()
+    ea = ida_ida.cvar.inf.min_ea
+    maxEa = ida_ida.cvar.inf.max_ea
     while (found!=True) and ea < maxEa:
-        ea = FindBinary(ea+1, SEARCH_DOWN|SEARCH_NEXT, searchText)
+        ea = find_binary(ea+1, SEARCH_DOWN|SEARCH_NEXT, searchText)
         #        print hex(ea)
         for xref in XrefsTo(ea, ida_xref.XREF_ALL):
             #print(xref.type, XrefTypeName(xref.type), 'from', hex(xref.frm), 'to', hex(xref.to))
             for xref2 in XrefsTo(xref.frm, ida_xref.XREF_ALL):
                 #Got it.
                 ea = xref2.frm
-                print "reference inside creation of DB2 = ", hex(ea)
+                print ("reference inside creation of DB2 = ", hex(ea))
                 found = True
                 break
 
@@ -138,9 +139,9 @@ def findWoWClient2Constructor():
         return 0
 
     db2CreatorFunc = GetFunctionAttr(ea, FUNCATTR_START)
-    print "db2CreatorFunc = ", hex(db2CreatorFunc)
+    print ("db2CreatorFunc = ", hex(db2CreatorFunc))
     constructorCall = findFirstFuncCall(db2CreatorFunc)
-    print "constructor call:", 	hex(constructorCall)
+    print ("constructor call:", 	hex(constructorCall))
     constructorItself = get_operand_value(constructorCall, 0)
     return constructorItself
 
@@ -162,10 +163,10 @@ def processXRefForFieldGetter(possibleGetterAddr, dbName, suffix = ''):
 
         # If field number was found - rename the getter
         if (fieldNum != -1):
-            idc.MakeNameEx(possibleGetterAddr, dbName+"DBInstance::GetField"+str(visitor.fieldNum)+suffix, idc.SN_NOWARN)
+            ida_name.set_name(possibleGetterAddr, dbName+"DBInstance::GetField"+str(visitor.fieldNum)+suffix, idc.SN_NOWARN)
             return 1
-    except DecompilationFailure, AttributeError:
-        print "Failed to process possible field getter at ", hex(possibleGetterAddr)
+    except:
+        print ("Failed to process possible field getter at ", hex(possibleGetterAddr))
 
     return 0
 
@@ -182,7 +183,7 @@ def findAndRenameFieldGetters(instanceGetter, instancePtr, dbName):
             processedFunctions.add(funcStart)
             foundGetterCnt += processXRefForFieldGetter(funcStart, dbName)
 
-    print "Found ", foundGetterCnt, "field getters for ", dbName
+    print ("Found ", foundGetterCnt, "field getters for ", dbName)
 
 def findAndRenameInstanceGetter(ea, dbName):
     for xref in XrefsTo(ea, ida_xref.XREF_ALL):
@@ -191,24 +192,24 @@ def findAndRenameInstanceGetter(ea, dbName):
             #Suppose the getter function is only 7 bytes long
             funcStart = GetFunctionAttr(xref.frm, FUNCATTR_START)
             funcEnd = GetFunctionAttr(xref.frm, FUNCATTR_END)
-            #print "ea = ", hex(xref.frm), XrefTypeName(xref.type), funcEnd - funcStart
+            #print ("ea = ", hex(xref.frm), XrefTypeName(xref.type), funcEnd - funcStart
             if ((funcEnd - funcStart) == 8):
-                print "Found getter: ", hex(funcStart), " for ", dbName
+                print ("Found getter: ", hex(funcStart), " for ", dbName)
                 prototype_details = idc.parse_decl("WowClientDB2_Base * __cdecl get()", idc.PT_SILENT)
                 if prototype_details:
                     idc.apply_type(funcStart, prototype_details)
                     idc.set_name(funcStart, prototype_details[0])
-                idc.MakeNameEx(funcStart, "get"+dbName+"DBInstance", idc.SN_NOWARN)
+                ida_name.set_name(funcStart, "get"+dbName+"DBInstance", idc.SN_NOWARN)
                 findAndRenameFieldGetters(funcStart, ea, dbName)
 
                 return funcStart
-    print "Getter not found for ", dbName
+    print ("Getter not found for ", dbName)
     return 0
 
 
 #Get data from constructor and rename field accessors
 def processConstructorCallAndDB(callEa):
-    print "processing ", hex(callEa)
+    print("processing ", hex(callEa))
     db2CreatorFunc = GetFunctionAttr(callEa, FUNCATTR_START)
     testdec = idaapi.decompile(callEa)
 
@@ -249,17 +250,17 @@ def processConstructorCallAndDB(callEa):
     else:
         op1 = arglist.at(1).x.x.obj_ea
 
-    print "dbInstance = ", hex(op0)
-    print "meta = ", hex(op1)
-    print "Fdid = ", Dword(op1+8)
-    db2Name = get_string(Qword(op1))
-    print "db2Name = ", db2Name
+    print("dbInstance = ", hex(op0))
+    print("meta = ", hex(op1))
+    print("Fdid = ", butil.get_uint32(op1+8))
+    db2Name = get_string(butil.get_uint64(op1))
+    print("db2Name = ", db2Name)
 
     instanceName = "g_"+db2Name+"DBInstance";
 
-    idc.MakeNameEx(db2CreatorFunc, "create"+db2Name+"DBInstance", idc.SN_NOWARN)
-    idc.MakeNameEx(op0, instanceName, idc.SN_NOWARN)
-    idc.MakeNameEx(op1, "g_"+db2Name+"DBMeta", idc.SN_NOWARN)
+    ida_name.set_name(db2CreatorFunc, "create"+db2Name+"DBInstance", idc.SN_NOWARN)
+    ida_name.set_name(op0, instanceName, idc.SN_NOWARN)
+    ida_name.set_name(op1, "g_"+db2Name+"DBMeta", idc.SN_NOWARN)
 
     db2NameByInstanceName[instanceName] = db2Name;
     tdbc.make_db2meta (op1)
@@ -272,7 +273,7 @@ def processConstructorCallAndDB(callEa):
     #set_type(op0, 'WowClientDB2_Base')
 
     findAndRenameInstanceGetter(op0, db2Name)
-    print ""
+    print("")
 
 wowClientConstr = findWoWClient2Constructor()
 
@@ -320,4 +321,4 @@ for xref in get_member_xrefs('WowClientDB2_Base', 'm_columnMeta'):
         dbName = db2NameByInstanceName[dbName.split('.')[0]]
         foundGetterCnt = processXRefForFieldGetter(funcStart, dbName, '_direct')
         if (foundGetterCnt > 0):
-            print 'Found new getter for ', dbName, ' at ', hex(funcStart)
+            print('Found new getter for ', dbName, ' at ', hex(funcStart))

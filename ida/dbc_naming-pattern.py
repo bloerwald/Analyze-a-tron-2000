@@ -2,6 +2,7 @@ import butil
 import cutil
 import tdbc
 import tutil
+import idc
 
 # clientdb_base ctor: search any database name, xref to dbmeta, xref
 # to the function using that, is mostly just one, the static ctor for
@@ -36,10 +37,10 @@ RowReturnerLoc = butil.find_pattern ('48 89 5C 24 18 55 56 57 48 83 EC 60 41 C6 
 # passed to. Alternatively go by the vtable that the ctor sets.
 clientdb_base_dtor_loc = 0x07FF73D680AD0 # butil.find_pattern ('48 89 5C 24 08 57 48 83 EC 40 33 FF 48 8D 05 ? ? ? ? 48 8b d9 48 89 01 40 38 b9 cd 01 00 00', butil.SearchRange.segment('.text'))
 
-MakeName(DB2ConstructorLocation, tdbc.WowClientDB2_Base + "::ctor")
-MakeName(GetInMemoryFieldOffsetFromMetaLoc, tdbc.WowClientDB2_Base + '::GetInMemoryFieldOffsetFromMeta')
-MakeName(RowReturnerLoc, tdbc.WowClientDB2_Base + "::GetRowByID")
-MakeName (clientdb_base_dtor_loc, tdbc.WowClientDB2_Base + "::dtor")
+butil.set_name(DB2ConstructorLocation, tdbc.WowClientDB2_Base + "::ctor")
+butil.set_name(GetInMemoryFieldOffsetFromMetaLoc, tdbc.WowClientDB2_Base + '::GetInMemoryFieldOffsetFromMeta')
+butil.set_name(RowReturnerLoc, tdbc.WowClientDB2_Base + "::GetRowByID")
+butil.set_name (clientdb_base_dtor_loc, tdbc.WowClientDB2_Base + "::dtor")
 
 dbobjects = {}
 
@@ -99,7 +100,7 @@ for codeRef in CodeRefsTo(clientdb_base_dtor_loc, 0):
   # todo: check that we're not naming a bigger static dtor, e.g. by function size
   name = match[0]
 
-  MakeName (cutil.function_containing(codeRef), 'staticdtor_db_{}'.format(name))
+  butil.set_name (cutil.function_containing(codeRef), 'staticdtor_db_{}'.format(name))
 
 def has_build(needle, builds):
   for build in builds:
@@ -129,7 +130,7 @@ def init_column_names_and_make_rec_structs():
     return inline_column_names
 
   user_agent_prefix = 'Mozilla/5.0 (Windows; U; %s) WorldOfWarcraft/'
-  build = idc.GetString (butil.find_string (user_agent_prefix) + len(user_agent_prefix), -1)
+  build = butil.get_cstring (butil.find_string (user_agent_prefix) + len(user_agent_prefix))
 
   dbds = dbd.parse_dbd_directory(likely_wowdefs_path + '/definitions')
 
@@ -536,11 +537,11 @@ for dbobject, name in dbobjects.items():
 
 for name, eas in column_getters.items():
   if len(eas) == 1:
-    MakeName (eas[0], name)
+    butil.set_name (eas[0], name)
   else:
     suff = ord('a')
     for ea in eas:
-      MakeName (ea, '{}_{}'.format(name, chr(suff)))
+      butil.set_name (ea, '{}_{}'.format(name, chr(suff)))
       suff += 1
 
   # todo: set type of function to `${dbmeta[column].types} (dbRec-but-with-that-stupid-offset*)`

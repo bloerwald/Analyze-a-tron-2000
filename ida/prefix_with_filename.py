@@ -71,7 +71,7 @@ names = dict()
 mediocre_names = dict()
 
 for filename_addr in butil.find_string_all('D:\\BuildServer\\WoW\\', butil.SearchRange.segment('.rdata')):
-  filename = idc.GetString(filename_addr, -1)
+  filename = butil.get_cstring(filename_addr).decode('utf-8')
 
   filename, fn_symbolish, prefix = strip_buildserver_fs_prefix (filename)
   butil.mark_string(filename_addr, 'filename_{}'.format (fn_symbolish))
@@ -87,7 +87,7 @@ for filename_addr in butil.find_string_all('D:\\BuildServer\\WoW\\', butil.Searc
       funs.add (addr)
 
   for fun in funs:
-    curr_fun_name = idc.GetFunctionName(fun)
+    curr_fun_name = idc.get_func_name(fun)
     new_fun_name = prefix + curr_fun_name
     if forbidden_name(curr_fun_name):
       #print('forbidden: {} "{}" to "{}"'.format(hex(fun), curr_fun_name,new_fun_name))
@@ -107,12 +107,12 @@ for filename_addr in butil.find_string_all('D:\\BuildServer\\WoW\\', butil.Searc
         del mediocre_names[fun]
 
 for fun, candidates in names.items():
-  MakeName (fun, candidates[0])
+  butil.set_name (fun, candidates[0])
   if len(candidates) > 1:
     idc.MakeComm(fun, 'or ' + ' or '.join(candidates[1:]))
     print('mutiple function names for {} :('.format(', '.join(candidates)))
 if settle_for_mediocre_names:
   for fun, candidates in mediocre_names.items():
-    MakeName (fun, candidates[0] + '$med')
+    butil.set_name (fun, candidates[0] + '$med')
     if len(candidates) > 1:
       idc.MakeComm(fun, 'or ' + ' or '.join(candidates[1:]))

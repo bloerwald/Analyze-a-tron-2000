@@ -107,9 +107,9 @@ def force_array(ea, type, name, count = None):
   idc.apply_type (ea, idc.parse_decl('{} a[{}];'.format(type, '' if count is None else str(count)), 0), idc.TINFO_DEFINITE)
 
 def force_function(ea, type, name):
-  idc.MakeUnknown(ea, 1, idc.DOUNK_SIMPLE)
-  idc.MakeFunction(ea)
-  idc.MakeName(ea, name)
+  ida_bytes.del_items(ea, 1, ida_bytes.DELIT_SIMPLE)
+  ida_funcs.add_func(ea, idc.BADADDR)
+  ida_name.set_name(ea, name, ida_name.SN_CHECK)
   idc.SetType(ea, type + ';')
   #ida_bytes.del_items (ea,
   #                     ida_bytes.DELIT_EXPAND | ida_bytes.DELIT_DELNAMES | ida_bytes.DELIT_NOCMT,
@@ -129,4 +129,53 @@ def get_cstring(ea):
 
 # a IDA clickable string for the given address
 def eastr(ea):
-  return hex(ea)[:-1]
+  if sys.version_info[0] < 3:
+    return hex(ea)[:-1]
+  return hex(ea)
+
+def get_uint8(ea):
+  return struct.unpack("B", struct.pack("B", ida_bytes.get_byte(ea)))[0]
+def get_int8(ea):
+  return struct.unpack("b", struct.pack("B", ida_bytes.get_byte(ea)))[0]
+def get_uint16(ea):
+  return struct.unpack("H", struct.pack("H", ida_bytes.get_word(ea)))[0]
+def get_int16(ea):
+  return struct.unpack("h", struct.pack("H", ida_bytes.get_word(ea)))[0]
+def get_uint32(ea):
+  return struct.unpack("I", struct.pack("I", ida_bytes.get_dword(ea)))[0]
+def get_int32(ea):
+  return struct.unpack("i", struct.pack("I", ida_bytes.get_dword(ea)))[0]
+def get_uint64(ea):
+  return struct.unpack("Q", struct.pack("Q", ida_bytes.get_qword(ea)))[0]
+def get_int64(ea):
+  return struct.unpack("q", struct.pack("Q", ida_bytes.get_qword(ea)))[0]
+def get_double(ea):
+  return struct.unpack("d", struct.pack("Q", ida_bytes.get_qword(ea)))[0]
+
+def mark_uint8(ea, name = None):
+  force_variable(ea, 'uint8_t', name)
+  return get_uint8(ea)
+def mark_int8(ea, name = None):
+  force_variable(ea, 'int8_t', name)
+  return get_int8(ea)
+def mark_uint16(ea, name = None):
+  force_variable(ea, 'uint16_t', name)
+  return get_uint16(ea)
+def mark_int16(ea, name = None):
+  force_variable(ea, 'int16_t', name)
+  return get_int16(ea)
+def mark_uint32(ea, name = None):
+  force_variable(ea, 'uint32_t', name)
+  return get_uint32(ea)
+def mark_int32(ea, name = None):
+  force_variable(ea, 'int32_t', name)
+  return get_int32(ea)
+def mark_uint64(ea, name = None):
+  force_variable(ea, 'uint64_t', name)
+  return get_uint64(ea)
+def mark_int64(ea, name = None):
+  force_variable(ea, 'int64_t', name)
+  return get_int64(ea)
+def mark_double(ea, name = None):
+  force_variable(ea, 'double', name)
+  return get_double(ea)

@@ -12,17 +12,17 @@ def _add_type (name, decl, attr, pre, post, mode):
     if mode == ADD_TYPE.ENSURE_UNIQUE:
       raise RuntimeError ("struct %s already exists" % (name))
     elif mode == ADD_TYPE.REPLACE:
-      print "## removed existing", name
+      print ("## removed existing", name)
       ida_typeinf.del_named_type (cvar.idati, name, ida_typeinf.NTF_TYPE)
     elif mode == ADD_TYPE.KEEP:
-      print "## kept existing", name
+      print ("## kept existing", name)
       return name
   if decl != '':
     decl = '{' + decl + '}'
   idc_parse_types ("{pre}\nstruct {attr} {name} {decl};\n{post}"
                    .format(pre=pre, name=name, attr=attr, decl=decl, post=post), 0)
   import_type (cvar.idati, -1, name)
-  print "## declared", name
+  print ("## declared", name)
   return name
 
 def add_packed_type (name, decl, mode = ADD_TYPE.KEEP):
