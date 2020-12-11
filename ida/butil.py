@@ -77,9 +77,7 @@ def find_string_all(string, search_range = SearchRange.absolutely_everything):
   return find_pattern_all (' '.join([hex(ord(c))[2:] for c in string]), search_range)
 
 def mark_string(ea, name = None):
-  strlen = len(idc.GetString (ea, -1))
-  if strlen == 0:
-    raise Exception('tried marking {} as string, but it isn\'t (len 0)'.format(hex(ea)))
+  strlen = len(idc.get_strlit_contents (ea, -1) or '')
   ida_bytes.del_items (ea,
                        ida_bytes.DELIT_EXPAND | ida_bytes.DELIT_DELNAMES | ida_bytes.DELIT_NOCMT,
                        strlen + 1)
@@ -87,7 +85,7 @@ def mark_string(ea, name = None):
   if name:
     ida_name.set_name (ea, name, ida_name.SN_CHECK)
   idc.apply_type (ea, idc.parse_decl('char const a[]', 0), idc.TINFO_DEFINITE)
-  return idc.GetString (ea, -1)
+  return get_cstring(ea)
 
 def force_variable(ea, type, name):
   t = ida_typeinf.tinfo_t()
