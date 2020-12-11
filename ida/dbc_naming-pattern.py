@@ -7,15 +7,69 @@ import idc
 # clientdb_base ctor: search any database name, xref to dbmeta, xref
 # to the function using that, is mostly just one, the static ctor for
 # the db object. db object ctor takes db* and meta*.
-# todo: this is probably way too long.
-DB2ConstructorLocation = butil.find_pattern ('4C 8B DC 53 57 48 81 EC A8 00 00 00 48 89 51 08 48 8D 05 ? ? ? ? 48 89 01 48 8B D9 33 C0 48 C7 41 78 08 00 00 00 48 89 41 10 48 89 41 18 48 89 41 20 48 89 41 28 48 89 41 30 48 89 41 38 48 89 41 40 48 89 41 48 48 89 41 50 48 89 41 58 48 89 41 60 48 89 41 68 48 89 81 88 00 00 00 48 89 81 80 00 00 00 48 89 81 98 00 00 00 48 89 81 A0 00 00 00 48 89 81 A8 00 00 00', butil.SearchRange.segment('.text'))
+try:
+  # beta, ptr
+  DB2ConstructorLocation = butil.find_pattern ('4C 8B DC ' +
+                                               '53 ' +
+                                               '57 ' + # push rdi
+                                               '48 81 EC A8 00 00 00 ' +
+                                               '48 89 51 08 ' +
+                                               '48 8D 05 ? ? ? ?  ' +
+                                               '48 89 01 ' +
+                                               '48 8B D9 ' +
+                                               '33 C0 ' +
+                                               '48 C7 41 78 08 00 00 00 ' +
+                                                # todo: this is probably way too long.
+                                               '48 89 41 10 ' +
+                                               '48 89 41 18 ' +
+                                               '48 89 41 20 ' +
+                                               '48 89 41 28 ' +
+                                               '48 89 41 30 ' +
+                                               '48 89 41 38 ' +
+                                               '48 89 41 40 ' +
+                                               '48 89 41 48 ' +
+                                               '48 89 41 50 ' +
+                                               '48 89 41 58 ' +
+                                               '48 89 41 60 ' +
+                                               '48 89 41 68 ' +
+                                               '48 89 81 88 00 00 00  ' +
+                                               '48 89 81 80 00 00 00  ' +
+                                               '48 89 81 98 00 00 00  ' +
+                                               '48 89 81 A0 00 00 00  ' +
+                                               '48 89 81 A8 00 00 00',
+                                               butil.SearchRange.segment('.text'))
+except:
+  # retail
+  DB2ConstructorLocation = butil.find_pattern ('40 53 ' +
+                                               '48 83 EC 50 ' + # sub rsp, 50h
+                                               '48 89 51 08 ' +
+                                               '48 8D 05 ? ? ? ?  ' +
+                                               '48 89 01 ' +
+                                               '48 8B D9 ' +
+                                               '33 C0 ' +
+                                               '48 C7 41 78 08 00 00 00',
+                                               butil.SearchRange.segment('.text'))
 
 # function that is called from column getters to get field offset:
 # search for string 'fieldIndex < m_meta->hotFixFieldCount', xref to
 # that. there is likely multiple inlined copies but one that just does
 # that assertion and accessing another m_meta field, returning it,
 # which is called from all over the place
-GetInMemoryFieldOffsetFromMetaLoc = butil.find_pattern ('48 89 5C 24 08 57 48 83 EC 40 48 8B 41 08 48 8B F9 8B DA 3B 50 14 72 40 C7 44 24 38 11 11 11 11 4C 8D 0D', butil.SearchRange.segment('.text'))
+try:
+  GetInMemoryFieldOffsetFromMetaLoc = butil.find_pattern ('48 89 5C 24 08 ' + # mov     [rsp+arg_10], rbx
+                                                          '57 ' + # push rdi
+                                                          '48 83 EC 40 ' + # sub     rsp, 40h
+                                                          '48 8B 41 08 ' +
+                                                          '48 8B F9 ' +
+                                                          '8B DA ' +
+                                                          '3B 50 14 ' +
+                                                          '72 40 ' +
+                                                          'C7 44 24 38 11 11 11 11 ' +
+                                                          '4C 8D 0D',
+                                                          butil.SearchRange.segment('.text'))
+except:
+  print('Unable to get GetInMemoryFieldOffsetFromMetaLoc, getters may be missing.')
+  GetInMemoryFieldOffsetFromMetaLoc = None
 
 # GetRowByID: start from a database object, preferably one that isn't
 # used *that* much. go over xrefs. at least one is going to call a
@@ -29,17 +83,45 @@ GetInMemoryFieldOffsetFromMetaLoc = butil.find_pattern ('48 89 5C 24 08 57 48 83
 #   v1 = sub_7FF7619B6CF0(a1);
 #   return sub_7FF761F1FE10((__int64)&db_CreatureModelData, v1, 0, &v3); <-- you are looking for this function
 # }
-RowReturnerLoc = butil.find_pattern ('48 89 5C 24 18 55 56 57 48 83 EC 60 41 C6 01 01 49 8B D9 80 B9 CD 01 00 00 00 41 0F B6 E8 8B F2 48 8B F9 75 ? C7 44 24 38 11 11 11 11', butil.SearchRange.segment('.text'))
+try:
+  RowReturnerLoc = butil.find_pattern ('48 89 5C 24 ? ' + # mov [rsp+?], rbx
+                                       '55 ' + # push rbp
+                                       '56 ' + # push rsi
+                                       '57 ' + # push rdi
+                                       '48 83 EC ? ' + # sub rsp, ?
+                                       '41 C6 01 01 ' + # mov byte ptr [r9], 1
+                                       '49 8B D9 ', # mov rbx, r9
+                                        # todo: this is probably way too long? retail works fine without rest
+                                        ## '80 B9 CD 01 00 00 00 ' +
+                                        ## '41 0F B6 E8 ' +
+                                        ## '8B F2 ' +
+                                        ## '48 8B F9 ' +
+                                        ## '75 ? ' +
+                                        ## 'C7 44 24 38 11 11 11 11',
+                                       butil.SearchRange.segment('.text'))
+except:
+  RowReturnerLoc = None
 
 # clientdb_base dtor: take any clientdb_base ctor, reference the db
 # object, the static ctor is usually first, the static dtor last. in
 # the static dtor, there should be one function the db object is
 # passed to. Alternatively go by the vtable that the ctor sets.
-clientdb_base_dtor_loc = 0x07FF73D680AD0 # butil.find_pattern ('48 89 5C 24 08 57 48 83 EC 40 33 FF 48 8D 05 ? ? ? ? 48 8b d9 48 89 01 40 38 b9 cd 01 00 00', butil.SearchRange.segment('.text'))
+clientdb_base_dtor_loc = butil.find_pattern ('48 89 5C 24 08 ' + # mov [rsp+08], rbx
+                                             '57 ' + # push rdi
+                                             '48 83 EC ? ' +  # sub rsp, ?
+                                             '33 FF ' + # xor edi, edi
+                                             '48 8D 05 ? ? ? ? ' + # lea rax, ?
+                                             '48 8b d9 ' + # mov rbx, rcx
+                                             '48 89 01 ', # mov [rcx], rax
+                                             # todo: retail uses a different line here, 48 39 b9 90 01 00 00, so omit for now
+                                             ## '40 38 b9 cd 01 00 00',
+                                             butil.SearchRange.segment('.text'))
 
 butil.set_name(DB2ConstructorLocation, tdbc.WowClientDB2_Base + "::ctor")
-butil.set_name(GetInMemoryFieldOffsetFromMetaLoc, tdbc.WowClientDB2_Base + '::GetInMemoryFieldOffsetFromMeta')
-butil.set_name(RowReturnerLoc, tdbc.WowClientDB2_Base + "::GetRowByID")
+if GetInMemoryFieldOffsetFromMetaLoc:
+  butil.set_name(GetInMemoryFieldOffsetFromMetaLoc, tdbc.WowClientDB2_Base + '::GetInMemoryFieldOffsetFromMeta')
+if RowReturnerLoc:
+  butil.set_name(RowReturnerLoc, tdbc.WowClientDB2_Base + "::GetRowByID")
 butil.set_name (clientdb_base_dtor_loc, tdbc.WowClientDB2_Base + "::dtor")
 
 dbobjects = {}
@@ -443,18 +525,19 @@ add_pattern (column_getter_prologue_inline_0, column_getter_matcher_inline_0)
 add_pattern (column_getter_prologue_inline_x, column_getter_matcher_inline_x)
 
 # Name column getting functions based on the uncompressed column returner
-for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
-  match = cutil.matches_any(codeRef, *column_getter_patterns)
+if GetInMemoryFieldOffsetFromMetaLoc:
+  for codeRef in CodeRefsTo(GetInMemoryFieldOffsetFromMetaLoc, 0):
+    match = cutil.matches_any(codeRef, *column_getter_patterns)
 
-  if match is None:
-    print ('column getters: skipping {}: unknown pattern'.format (butil.eastr (codeRef)))
-    continue
+    if match is None:
+      print ('column getters: skipping {}: unknown pattern'.format (butil.eastr (codeRef)))
+      continue
 
-  new_name = make_column_getter_name(match[1], match[0])
+    new_name = make_column_getter_name(match[1], match[0])
 
-  if not new_name in column_getters:
-    column_getters[new_name] = []
-  column_getters[new_name] += [cutil.function_containing(codeRef)]
+    if not new_name in column_getters:
+      column_getters[new_name] = []
+    column_getters[new_name] += [cutil.function_containing(codeRef)]
 
 
 column_getter_dbobj_first = [ (+0x00, ['mov',  'rax', '.*' ]), ]
