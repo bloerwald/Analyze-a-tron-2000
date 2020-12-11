@@ -93,7 +93,8 @@ def force_variable(ea, type, name):
   ida_bytes.del_items (ea,
                        ida_bytes.DELIT_EXPAND | ida_bytes.DELIT_DELNAMES | ida_bytes.DELIT_NOCMT,
                        t.get_size())
-  ida_name.set_name (ea, name, ida_name.SN_CHECK)
+  if name:
+    ida_name.set_name (ea, name, ida_name.SN_CHECK)
   idc.apply_type (ea, idc.parse_decl('{} a;'.format(type), 0), idc.TINFO_DEFINITE)
 
 def force_array(ea, type, name, count = None):
@@ -117,7 +118,14 @@ def force_function(ea, type, name):
   #ida_name.set_name (ea, name, ida_name.SN_CHECK)
   #idc.apply_type (ea, idc.parse_decl(type, 0), idc.TINFO_DEFINITE)
 
+def set_name(ea, name):
+  ida_name.set_name (ea, name, ida_name.SN_CHECK)
 
+seen_strings = seen_strings if 'seen_strings' in locals() else set()
+def get_cstring(ea):
+  res = ida_bytes.get_strlit_contents (ea, -1, ida_nalt.STRTYPE_C) or b''
+  seen_strings.add(res)
+  return res
 
 # a IDA clickable string for the given address
 def eastr(ea):
