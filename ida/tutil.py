@@ -12,8 +12,7 @@ def _add_type (name, decl, attr, pre, post, mode):
     if mode == ADD_TYPE.ENSURE_UNIQUE:
       raise RuntimeError ("struct %s already exists" % (name))
     elif mode == ADD_TYPE.REPLACE:
-      print ("## removed existing", name)
-      ida_typeinf.del_named_type (cvar.idati, name, ida_typeinf.NTF_TYPE)
+      print ("## replaced existing", name)
     elif mode == ADD_TYPE.KEEP:
       print ("## kept existing", name)
       return name
