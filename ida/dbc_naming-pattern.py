@@ -112,9 +112,9 @@ clientdb_base_dtor_loc = butil.find_pattern ('48 89 5C 24 08 ' + # mov [rsp+08],
                                              '33 FF ' + # xor edi, edi
                                              '48 8D 05 ? ? ? ? ' + # lea rax, ?
                                              '48 8b d9 ' + # mov rbx, rcx
-                                             '48 89 01 ', # mov [rcx], rax
+                                             '48 89 01 ' + # mov [rcx], rax
                                              # todo: retail uses a different line here, 48 39 b9 90 01 00 00, so omit for now
-                                             ## '40 38 b9 cd 01 00 00',
+                                             '40 38 b9 cd 01 00 00',
                                              butil.SearchRange.segment('.text'))
 
 butil.set_name(DB2ConstructorLocation, tdbc.WowClientDB2_Base + "::ctor")
@@ -172,7 +172,7 @@ for codeRef in CodeRefsTo(clientdb_base_dtor_loc, 0):
                                 (-0x04, ['add',  'rsp', '.*'                      ]),
                                 (+0x00, ['jmp',  tdbc.WowClientDB2_Base + '__dtor']),
                               ],
-                              [ (0, 1, lambda val: Name(val)[len('db_'):]),
+                              [ (0, 1, lambda val: idc.get_name(val)[len('db_'):]),
                               ],
                             ),
                            )
@@ -212,8 +212,9 @@ def init_column_names_and_make_rec_structs():
     return inline_column_names
 
   user_agent_prefix = 'Mozilla/5.0 (Windows; U; %s) WorldOfWarcraft/'
-  build = butil.get_cstring (butil.find_string (user_agent_prefix) + len(user_agent_prefix))
+  build = butil.get_cstring (butil.find_string (user_agent_prefix) + len(user_agent_prefix)).decode("utf-8")
 
+  print(F"Parsing DBD directory {likely_wowdefs_path + '/definitions'} with build {build}")
   dbds = dbd.parse_dbd_directory(likely_wowdefs_path + '/definitions')
 
   for name, parsed in dbds.items():
@@ -261,9 +262,9 @@ inline_column_names = init_column_names_and_make_rec_structs()
 
 def make_column_getter_name(db, idx):
   if db in inline_column_names:
-    return '{}::col_{}_{}'.format (db, idx, inline_column_names[db][idx])
+    return '{}::col_{}_{}'.format (db, int(idx), inline_column_names[db][int(idx)])
   else:
-    return '{}::col_{}'.format (db, idx)
+    return '{}::col_{}'.format (db, int(idx))
 
 column_getters = {}
 
@@ -294,16 +295,16 @@ def column_getter_prologue_inline_x(base = -0x0C):
          ]
 
 column_getter_matcher_fun_0 = [ 0,
-                                (0, 0, lambda val: Name(val)[len('GetDB'):-len('Pointer')]),
+                                (0, 0, lambda val: idc.get_name(val)[len('GetDB'):-len('Pointer')]),
                               ]
 column_getter_matcher_fun_x = [ (1, 1, lambda val: val),
-                                (0, 0, lambda val: Name(val)[len('GetDB'):-len('Pointer')]),
+                                (0, 0, lambda val: idc.get_name(val)[len('GetDB'):-len('Pointer')]),
                               ]
 column_getter_matcher_inline_0 = [ 0,
-                                   (1, 1, lambda val: Name(val)[len('db_'):]),
+                                   (1, 1, lambda val: idc.get_name(val)[len('db_'):]),
                                  ]
 column_getter_matcher_inline_x = [ (0, 1, lambda val: val),
-                                   (1, 1, lambda val: Name(val)[len('db_'):]),
+                                   (1, 1, lambda val: idc.get_name(val)[len('db_'):]),
                                  ]
 
 def column_getter_epilogue_a(base = +0x05):
