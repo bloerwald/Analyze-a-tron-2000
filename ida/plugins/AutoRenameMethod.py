@@ -84,7 +84,7 @@ class autoRename_hooks_t(ida_hexrays.Hexrays_Hooks):
                     if (firstPtrRemove.is_struct() and not firstPtrRemove.is_ptr()):
                         currentFuncName = ida_name.get_ea_name(vu.cfunc.entry_ea)
                         # self._log("before demangle current func name = %s" % (currentFuncName))
-                        demangled = idc.Demangle(currentFuncName,idc.GetLongPrm(idc.INF_SHORT_DN))
+                        demangled = idc.demangle_name(currentFuncName,idc.get_inf_attr(idc.INF_SHORT_DN))
                         if (demangled != None):
                             self._log("Overriding mangled name = %s" % (currentFuncName))
                             currentFuncName = demangled
@@ -94,8 +94,8 @@ class autoRename_hooks_t(ida_hexrays.Hexrays_Hooks):
                             currentFuncName = tokens[1]
                         currentFuncName = currentFuncName.split("(")[0]
                         # self._log("current func name = %s" % (currentFuncName))
-                        idc.MakeNameEx(vu.cfunc.entry_ea, firstPtrRemove._print()+"::"+currentFuncName, idc.SN_NOWARN)
-                        idaapi.autoWait()
+                        idc.set_name(vu.cfunc.entry_ea, firstPtrRemove._print()+"::"+currentFuncName, idc.SN_NOWARN)
+                        idaapi.auto_wait()
                         # self._log("Decomp Res : %s" % idaapi.decompile(vu.cfunc.entry_ea))
                         idaapi.refresh_idaview_anyway()
                         vu.refresh_ctext()
@@ -140,6 +140,5 @@ class autoRenamePlugin_t(idaapi.plugin_t):
 
 def PLUGIN_ENTRY():
     return autoRenamePlugin_t()
-
 
 

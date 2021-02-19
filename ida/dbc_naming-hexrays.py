@@ -252,8 +252,8 @@ def processConstructorCallAndDB(callEa):
 
     print("dbInstance = ", hex(op0))
     print("meta = ", hex(op1))
-    print("Fdid = ", butil.get_uint32(op1+8))
-    db2Name = get_string(butil.get_uint64(op1))
+    print("Fdid = ", ida_bytes.get_32bit(op1+8))
+    db2Name = get_string(ida_bytes.get_64bit(op1))
     print("db2Name = ", db2Name)
 
     instanceName = "g_"+db2Name+"DBInstance";
@@ -269,9 +269,6 @@ def processConstructorCallAndDB(callEa):
     if prototype_details:
         idc.apply_type(op0, prototype_details)
 
-    # idc.apply_type(op0, 'WowClientDB2_Base', TINFO_DEFINITE)
-    #set_type(op0, 'WowClientDB2_Base')
-
     findAndRenameInstanceGetter(op0, db2Name)
     print("")
 
@@ -280,6 +277,10 @@ wowClientConstr = findWoWClient2Constructor()
 for xref in XrefsTo(wowClientConstr, ida_xref.XREF_ALL):
     if (XrefTypeName(xref.type) == "Code_Near_Call"):
         processConstructorCallAndDB(xref.frm)
+
+#Process all global references to WowClientDB2_Base.m_columnMeta
+idaapi.autoWait()
+
 
 #Process all global references to WowClientDB2_Base.m_columnMeta
 def get_member_ids(sid):
