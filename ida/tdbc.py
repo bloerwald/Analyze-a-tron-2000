@@ -174,7 +174,9 @@ DBMeta = tutil.add_unpacked_type ('DBMeta',
                                    int parentIdFieldIndex;
                                    int parentIdFieldIndex_file;
                                    void* sortFunc;
-                                   void* sortFuncIndirect;""".format(stridxt=DBMeta_stridx,intidxt=DBMeta_intidx))
+                                   void* sortFuncIndirect;
+                                   bool field_A8;
+                                   bool field_A9;""".format(stridxt=DBMeta_stridx,intidxt=DBMeta_intidx))
 
 WowClientDB2_Base = tutil.add_unpacked_type ('WowClientDB2_Base',
                                               """
