@@ -74,6 +74,7 @@ def run_autoanalysis(start, end = None):
     end = start + 1
   if ida_api_is_new:
     ida_auto.plan_and_wait(start, end)
+    ida_auto.auto_wait()
   else:
     idc.AnalyzeArea(start, end)
 
