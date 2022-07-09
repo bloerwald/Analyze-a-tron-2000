@@ -100,7 +100,7 @@ def patch(ea, data):
 
 def bytes(ea, count = None):
   if not count:
-    count = idc.ItemSize(ea)
+    count = idc.get_item_size(ea)
   result = []
   while count:
     result += [idc.Byte(ea)]
@@ -111,7 +111,7 @@ def bytes(ea, count = None):
 def nop(ea, c = None):
   print("nop (" + hex(ea) + ", " + (str(c) if c else "whole_instruction") + ")")
   if not c:
-    c = idc.ItemSize(ea)
+    c = idc.get_item_size(ea)
   while c:
     patch(ea, assemble(ea, "nop"))
     c -= 1
@@ -147,27 +147,27 @@ def loc_string_to_ea(loc, base):
   add = int(match.group("add"), 16) if match.group("add") else 0
   return addr + add
 def jump_op_string_to_ea(ea):
-  return loc_string_to_ea(idc.GetOpnd(ea,0), ea)
+  return loc_string_to_ea(idc.print_operand(ea,0), ea)
 
 def redirect_jump(ea, target):
   print("redirect_jump (" + hex(ea) + ", " + hex(target) + ")")
   ida_bytes.del_items(target)
   run_autoanalysis(target)
-  patch_ins(ea, idc.GetMnem(ea) + " " + name_at(target))
+  patch_ins(ea, idc.print_insn_mnem(ea) + " " + name_at(target))
 
 def next_non_nop_NOT_JUMPING(ea):
-  if idc.GetMnem(ea) == "nop" or is_non_NOP_nop(ea):
-    return next_non_nop_NOT_JUMPING (ea + idc.ItemSize(ea))
+  if idc.print_insn_mnem(ea) == "nop" or is_non_NOP_nop(ea):
+    return next_non_nop_NOT_JUMPING (ea + idc.get_item_size(ea))
   return ea
 def next_non_nop_FOLLOWING_JUMPS(ea):
   ea = next_non_nop_NOT_JUMPING(ea)
-  if idc.GetMnem(ea) == "jmp":
+  if idc.print_insn_mnem(ea) == "jmp":
     target = jump_op_string_to_ea(ea)
     return next_non_nop_FOLLOWING_JUMPS(target) if target else ea
   return ea
 
 def non_nop_after_ins(ea):
-  return next_non_nop_FOLLOWING_JUMPS(ea + idc.ItemSize(ea))
+  return next_non_nop_FOLLOWING_JUMPS(ea + idc.get_item_size(ea))
 
 def make_jump_unconditional(ea):
   print("make_jump_unconditional (" + hex(ea) + ")")
@@ -178,12 +178,12 @@ def make_jump_unconditional(ea):
 
 def is_non_NOP_nop(current_ea):
   # <mov> x, x
-  if idc.GetMnem(current_ea) in movs: # no flags affected
-    if idc.GetOpnd(current_ea,0) == idc.GetOpnd(current_ea,1):
+  if idc.print_insn_mnem(current_ea) in movs: # no flags affected
+    if idc.print_operand(current_ea,0) == idc.print_operand(current_ea,1):
       return True
   # <shift> x, 0
-  if idc.GetMnem(current_ea) in shifts: # If the count is 0, the flags are not affected.
-    if idc.GetOpType(current_ea,1) == o_imm and idc.GetOpnd(current_ea,1) == "0":
+  if idc.print_insn_mnem(current_ea) in shifts: # If the count is 0, the flags are not affected.
+    if idc.get_operand_type(current_ea,1) == o_imm and idc.print_operand(current_ea,1) == "0":
       return True
   return False
 
@@ -194,7 +194,7 @@ def assume_code_at(ea):
 
 def maybe_simplify(current_ea):
   # lol nope
-  #if idc.GetMnem(current_ea) == "wait":
+  #if idc.print_insn_mnem(current_ea) == "wait":
   #  return lambda: nop(current_ea)
 
   # <mov> x, x   <shift> x, 0
@@ -208,9 +208,9 @@ def maybe_simplify(current_ea):
   # ->
   # text x, y
   # jmp A
-  if idc.GetMnem(current_ea) in ["test", "and", "or", "xor"]:
+  if idc.print_insn_mnem(current_ea) in ["test", "and", "or", "xor"]:
     next_ea = non_nop_after_ins(current_ea)
-    if idc.GetMnem(next_ea) in ["jnb", "jno"] and jump_op_string_to_ea(next_ea) > next_ea:
+    if idc.print_insn_mnem(next_ea) in ["jnb", "jno"] and jump_op_string_to_ea(next_ea) > next_ea:
       return lambda: make_jump_unconditional(next_ea)
 
   # clc
@@ -218,18 +218,18 @@ def maybe_simplify(current_ea):
   # ->
   # clc
   # jmp A
-  if idc.GetMnem(current_ea) == "clc":
+  if idc.print_insn_mnem(current_ea) == "clc":
     next_ea = non_nop_after_ins(current_ea)
-    if idc.GetMnem(next_ea) == "jnb":
+    if idc.print_insn_mnem(next_ea) == "jnb":
       return lambda: make_jump_unconditional(next_ea)
   # stc
   # {jbe, jb} A
   # ->
   # stc
   # jmp A
-  if idc.GetMnem(current_ea) == "stc":
+  if idc.print_insn_mnem(current_ea) == "stc":
     next_ea = non_nop_after_ins(current_ea)
-    if idc.GetMnem(next_ea) in ["jbe", "jb"]:
+    if idc.print_insn_mnem(next_ea) in ["jbe", "jb"]:
       return lambda: make_jump_unconditional(next_ea)
 
   # A: test x, y    A: nops
@@ -241,14 +241,14 @@ def maybe_simplify(current_ea):
   # A+a: nops
   # <jmp> B
   # B:
-  if idc.GetMnem(current_ea) in jumps:
-    mnem = idc.GetMnem(current_ea)
+  if idc.print_insn_mnem(current_ea) in jumps:
+    mnem = idc.print_insn_mnem(current_ea)
     target = jump_op_string_to_ea(current_ea)
-    if target < current_ea and (current_ea - target) < 10 and idc.GetMnem(target) is "":
+    if target < current_ea and (current_ea - target) < 10 and idc.print_insn_mnem(target) == '':
       assume_code_at(target)
       re_analyze_relevant_range()
       target = next_non_nop_NOT_JUMPING(target)
-      if idc.GetMnem(target) == mnem:
+      if idc.print_insn_mnem(target) == mnem:
         actual_target = jump_op_string_to_ea(target)
         return lambda: redirect_jump(current_ea, actual_target)
 
@@ -257,20 +257,20 @@ def maybe_simplify(current_ea):
   # ->
   # A: <jmp> C
   # B: <jmp> C
-  if idc.GetMnem(current_ea) in jumps:
-    mnem = idc.GetMnem(current_ea)
+  if idc.print_insn_mnem(current_ea) in jumps:
+    mnem = idc.print_insn_mnem(current_ea)
     target = jump_op_string_to_ea(current_ea)
     if target:
-      if idc.GetMnem(target) == "":
+      if idc.print_insn_mnem(target) == "":
         assume_code_at(target)
         assume_code_at(current_ea)
         re_analyze_relevant_range()
       any_target = next_non_nop_FOLLOWING_JUMPS(target)
       maybe_jmp_target = next_non_nop_NOT_JUMPING(target)
-      if idc.GetMnem(any_target) == mnem:
+      if idc.print_insn_mnem(any_target) == mnem:
         actual_target = jump_op_string_to_ea(any_target)
         return lambda: redirect_jump(current_ea, actual_target)
-      elif idc.GetMnem(maybe_jmp_target) == "jmp":
+      elif idc.print_insn_mnem(maybe_jmp_target) == "jmp":
         actual_target = jump_op_string_to_ea(maybe_jmp_target)
         return lambda: redirect_jump(current_ea, actual_target)
 
@@ -280,10 +280,10 @@ def maybe_simplify(current_ea):
   # A: jmp B
   #    <jmpb> B
   for a, b in [(lhs, rhs) for lhs, rhs in jump_pairs] + [(rhs, lhs) for lhs, rhs in jump_pairs]:
-    if idc.GetMnem(current_ea) == a:
+    if idc.print_insn_mnem(current_ea) == a:
       target_a = jump_op_string_to_ea(current_ea)
       next_ea = non_nop_after_ins(current_ea)
-      if idc.GetMnem(next_ea) == b:
+      if idc.print_insn_mnem(next_ea) == b:
         target_b = jump_op_string_to_ea(next_ea)
         if target_a == target_b:
           return lambda: make_jump_unconditional(current_ea)
@@ -295,16 +295,16 @@ def maybe_simplify(current_ea):
   # <op> stack, constantb
   # ->
   # mov stack, constanta <op> constantb
-  if idc.GetMnem(current_ea) == "mov" \
-     and starts_with(idc.GetOpnd(current_ea,0), "qword ptr [rbp+") \
-     and idc.GetOpType(current_ea,1) == o_imm:
-    lhs = long(idc.GetOpnd(current_ea, 1).replace("h", ""), 16)
+  if idc.print_insn_mnem(current_ea) == "mov" \
+     and starts_with(idc.print_operand(current_ea,0), "qword ptr [rbp+") \
+     and idc.get_operand_type(current_ea,1) == o_imm:
+    lhs = long(idc.print_operand(current_ea, 1).replace("h", ""), 16)
     next_ea = non_nop_after_ins(current_ea)
-    op = idc.GetMnem(next_ea)
+    op = idc.print_insn_mnem(next_ea)
     if op in ["xor", "add"] \
-       and idc.GetOpnd(current_ea, 0) == idc.GetOpnd(next_ea, 0) \
-       and idc.GetOpType(next_ea,1) == o_imm:
-      rhs = long(idc.GetOpnd(next_ea, 1).replace("h", ""), 16)
+       and idc.print_operand(current_ea, 0) == idc.print_operand(next_ea, 0) \
+       and idc.get_operand_type(next_ea,1) == o_imm:
+      rhs = long(idc.print_operand(next_ea, 1).replace("h", ""), 16)
       result = 0
       if op == "xor":
         result = lhs ^ rhs
