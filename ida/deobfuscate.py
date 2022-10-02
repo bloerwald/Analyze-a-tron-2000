@@ -298,13 +298,13 @@ def maybe_simplify(current_ea):
   if idc.print_insn_mnem(current_ea) == "mov" \
      and starts_with(idc.print_operand(current_ea,0), "qword ptr [rbp+") \
      and idc.get_operand_type(current_ea,1) == o_imm:
-    lhs = long(idc.print_operand(current_ea, 1).replace("h", ""), 16)
+    lhs = int(idc.print_operand(current_ea, 1).replace("h", ""), 16)
     next_ea = non_nop_after_ins(current_ea)
     op = idc.print_insn_mnem(next_ea)
     if op in ["xor", "add"] \
        and idc.print_operand(current_ea, 0) == idc.print_operand(next_ea, 0) \
        and idc.get_operand_type(next_ea,1) == o_imm:
-      rhs = long(idc.print_operand(next_ea, 1).replace("h", ""), 16)
+      rhs = int(idc.print_operand(next_ea, 1).replace("h", ""), 16)
       result = 0
       if op == "xor":
         result = lhs ^ rhs
