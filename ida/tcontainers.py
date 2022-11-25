@@ -5,17 +5,17 @@ class blz_vector (tutil.template_description):
     tutil.template_description.__init__ (self, "blz::vector", ["T"])
   def create_types (self, parameter_names, unique = True):
     p2 = tutil.add_packed_type ( "_2_blz_vector",
-                                 "unsigned long long size; unsigned long long capacity;")
+                                 "unsigned long long m_size; unsigned long long m_capacity;") # todo: m_capacity is 63+1 bit m_capacity+m_capacity_is_embedded
     tutil.add_packed_type ( self.make_name (parameter_names),
-                            "%s* data; %s _2;" % (parameter_names[0], p2),
+                            "%s* m_elements; %s _2;" % (parameter_names[0], p2),
                             unique)
 
-blz_string = tutil.add_packed_type ('blz::string',
+blz_string = tutil.add_packed_type ('blz::string', # todo: m_capacity is 63+1 bit m_capacity+m_capacity_is_embedded
                                     """
-                                    char* data;
-                                    unsigned long long size;
-                                    unsigned long long capacity;
-                                    char in_situ[16];""")
+                                    char* m_elements;
+                                    unsigned long long m_size;
+                                    unsigned long long m_capacity; 
+                                    char m_storage[16];""")
 
 class blz_pair (tutil.template_description):
   def __init__ (self):
@@ -35,7 +35,7 @@ class blz_chained_hash_node (tutil.template_description):
     tutil.add_unpacked_type ( own_name,
                               '''
                               {node}* next;
-                              {Value} payload;'''.format (node=own_name, Value=parameter_names[0]),
+                              {Value} val;'''.format (node=own_name, Value=parameter_names[0]),
                               unique,
                               8)
 
@@ -47,19 +47,19 @@ class blz_unordered_set (tutil.template_description):
     tutil.template_description.__init__ (self, "blz::unordered_set", ["Value"])
   def create_types (self, parameter_names, unique = True):
     node = tutil.create_template_and_make_name(blz_chained_hash_node(), parameter_names)
-    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names, 'blz::unordered_set::iterator'),
+    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names, 'blz::unordered_set::iterator'), # todo: blz::chained_hash_table_const_iterator<Node>
                                          '''
-                                         {node}* element;
-                                         {node}** bucket_with_element;
-                                         {node}** last_bucket;'''.format (node=node),
+                                         {node}* node;
+                                         {node}** bucket;
+                                         {node}** end;'''.format (node=node),
                                          False)
     insert_result = tutil.create_template_and_make_name(blz_pair(), [iterator, 'bool'], False)
-    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names),
+    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names), # todo: blz::chained_hash_table<Traits>
                                          '''
-                                         unsigned __int64 num_buckets;
+                                         unsigned __int64 m_bucket_count;
                                          {node}** m_buckets;
-                                         unsigned __int64 total_elements;
-                                         float elem_per_bucket_threshold;'''.format (node=node),
+                                         unsigned __int64 m_entry_count;
+                                         float m_max_load_factor;'''.format (node=node),
                                          unique)
 
 class blz_unordered_map (tutil.template_description):
@@ -68,17 +68,17 @@ class blz_unordered_map (tutil.template_description):
   def create_types (self, parameter_names, unique = True):
     value = tutil.create_template_and_make_name(blz_pair(), parameter_names)
     node = tutil.create_template_and_make_name(blz_chained_hash_node(), [value])
-    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names, 'blz::unordered_map::iterator'),
+    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names, 'blz::unordered_map::iterator'), # todo: blz::chained_hash_table_const_iterator<Node>
                                          '''
-                                         {node}* element;
-                                         {node}** bucket_with_element;
-                                         {node}** last_bucket;'''.format (node=node),
+                                         {node}* node;
+                                         {node}** bucket;
+                                         {node}** end;'''.format (node=node),
                                          False)
     insert_result = tutil.create_template_and_make_name(blz_pair(), [iterator, 'bool'], False)
-    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names),
+    iterator = tutil.add_unpacked_type ( self.make_name (parameter_names), # todo: blz::chained_hash_table<Traits>
                                          '''
-                                         unsigned __int64 num_buckets;
+                                         unsigned __int64 m_bucket_count;
                                          {node}** m_buckets;
-                                         unsigned __int64 total_elements;
-                                         float elem_per_bucket_threshold;'''.format (node=node),
+                                         unsigned __int64 m_entry_count;
+                                         float m_max_load_factor;'''.format (node=node),
                                          unique)
