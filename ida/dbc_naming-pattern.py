@@ -114,7 +114,7 @@ clientdb_base_dtor_loc = butil.find_pattern ('48 89 5C 24 08 ' + # mov [rsp+08],
                                              '48 8b d9 ' + # mov rbx, rcx
                                              '48 89 01 ' + # mov [rcx], rax
                                              # todo: retail uses a different line here, 48 39 b9 90 01 00 00, so omit for now
-                                             '40 38 b9 cd 01 00 00',
+                                             '40 38 b9 ? 01 00 00', # cmp [rcx+?EDh], dil
                                              butil.SearchRange.segment('.text'))
 
 butil.set_name(DB2ConstructorLocation, tdbc.WowClientDB2_Base + "::ctor")
