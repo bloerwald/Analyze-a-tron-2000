@@ -102,27 +102,32 @@ try:
 except:
   RowReturnerLoc = None
 
-# clientdb_base dtor: take any clientdb_base ctor, reference the db
-# object, the static ctor is usually first, the static dtor last. in
-# the static dtor, there should be one function the db object is
-# passed to. Alternatively go by the vtable that the ctor sets.
-clientdb_base_dtor_loc = butil.find_pattern ('48 89 5C 24 08 ' + # mov [rsp+08], rbx
-                                             '57 ' + # push rdi
-                                             '48 83 EC ? ' +  # sub rsp, ?
-                                             '33 FF ' + # xor edi, edi
-                                             '48 8D 05 ? ? ? ? ' + # lea rax, ?
-                                             '48 8b d9 ' + # mov rbx, rcx
-                                             '48 89 01 ' + # mov [rcx], rax
-                                             # todo: retail uses a different line here, 48 39 b9 90 01 00 00, so omit for now
-                                             '40 38 b9 ? 01 00 00', # cmp [rcx+?EDh], dil
-                                             butil.SearchRange.segment('.text'))
+# 10.1.5 has changed the pattern enough for me not to care about marking static dtors anymore.
+try:
+  # clientdb_base dtor: take any clientdb_base ctor, reference the db
+  # object, the static ctor is usually first, the static dtor last. in
+  # the static dtor, there should be one function the db object is
+  # passed to. Alternatively go by the vtable that the ctor sets.
+  clientdb_base_dtor_loc = butil.find_pattern ('48 89 5C 24 08 ' + # mov [rsp+08], rbx
+                                               '57 ' + # push rdi
+                                               '48 83 EC ? ' +  # sub rsp, ?
+                                               '33 FF ' + # xor edi, edi
+                                               '48 8D 05 ? ? ? ? ' + # lea rax, ?
+                                               '48 8b d9 ' + # mov rbx, rcx
+                                               '48 89 01 ' + # mov [rcx], rax
+                                               # todo: retail uses a different line here, 48 39 b9 90 01 00 00, so omit for now
+                                               '40 38 b9 ? 01 00 00', # cmp [rcx+?EDh], dil
+                                               butil.SearchRange.segment('.text'))
+except:
+  clientdb_base_dtor_loc = None
 
 butil.set_name(DB2ConstructorLocation, tdbc.WowClientDB2_Base + "::ctor")
 if GetInMemoryFieldOffsetFromMetaLoc:
   butil.set_name(GetInMemoryFieldOffsetFromMetaLoc, tdbc.WowClientDB2_Base + '::GetInMemoryFieldOffsetFromMeta')
 if RowReturnerLoc:
   butil.set_name(RowReturnerLoc, tdbc.WowClientDB2_Base + "::GetRowByID")
-butil.set_name (clientdb_base_dtor_loc, tdbc.WowClientDB2_Base + "::dtor")
+if clientdb_base_dtor_loc:
+  butil.set_name (clientdb_base_dtor_loc, tdbc.WowClientDB2_Base + "::dtor")
 
 dbobjects = {}
 
@@ -166,23 +171,24 @@ for codeRef in CodeRefsTo(DB2ConstructorLocation, 0):
                           '{db}* __fastcall a()'.format(db=tdbc.WowClientDB2_Base),
                           'GetDB{name}Pointer'.format(name=name))
 
-for codeRef in CodeRefsTo(clientdb_base_dtor_loc, 0):
-  match = cutil.matches_any(codeRef,
-                            ( [ (-0x0B, ['lea',  'rcx', 'db_.*'                   ]),
-                                (-0x04, ['add',  'rsp', '.*'                      ]),
-                                (+0x00, ['jmp',  tdbc.WowClientDB2_Base + '__dtor']),
-                              ],
-                              [ (0, 1, lambda val: idc.get_name(val)[len('db_'):]),
-                              ],
-                            ),
-                           )
+if clientdb_base_dtor_loc:
+  for codeRef in CodeRefsTo(clientdb_base_dtor_loc, 0):
+    match = cutil.matches_any(codeRef,
+                              ( [ (-0x0B, ['lea',  'rcx', 'db_.*'                   ]),
+                                  (-0x04, ['add',  'rsp', '.*'                      ]),
+                                  (+0x00, ['jmp',  tdbc.WowClientDB2_Base + '__dtor']),
+                                ],
+                                [ (0, 1, lambda val: idc.get_name(val)[len('db_'):]),
+                                ],
+                              ),
+                             )
 
-  if match is None:
-    continue
-  # todo: check that we're not naming a bigger static dtor, e.g. by function size
-  name = match[0]
+    if match is None:
+      continue
+    # todo: check that we're not naming a bigger static dtor, e.g. by function size
+    name = match[0]
 
-  butil.set_name (cutil.function_containing(codeRef), 'staticdtor_db_{}'.format(name))
+    butil.set_name (cutil.function_containing(codeRef), 'staticdtor_db_{}'.format(name))
 
 def has_build(needle, builds):
   for build in builds:
